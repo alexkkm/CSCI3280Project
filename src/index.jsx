@@ -6,6 +6,9 @@ import ReactDOM from 'react-dom/client';
 // Addictional decoration 
 import './index.css';
 
+// Import other page
+import AudioPlayer from './AudioPlayer';
+
 // Index Page component
 class Index extends React.Component {
   render() {
@@ -24,6 +27,7 @@ export default function App() {
     // React Router
     <div>
     <Index />
+    <AudioPlayer />
     </div>
   );
 }
