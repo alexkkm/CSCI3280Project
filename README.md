@@ -4,5 +4,5 @@ yarn add
 ~~~
 run the app:
 ~~~
-yar start
+yarn start
 ~~~
