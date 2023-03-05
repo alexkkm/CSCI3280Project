@@ -1,6 +1,7 @@
 // Basic tools
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import AudioPlayer from './AudioScript/AudioPlayer';
 
 
 // Addictional decoration 
@@ -11,8 +12,8 @@ class Index extends React.Component {
   render() {
     return (
       <div className="App">
-        <h1>Hello World</h1>
-        <p>sdddddddddddddddd</p>
+        <h1>Music Player</h1>
+        <p>CSCI3280 project</p>
       </div>
     );
   }
@@ -24,6 +25,7 @@ export default function App() {
     // React Router
     <div>
     <Index />
+    <AudioPlayer/>
     </div>
   );
 }
