@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { DecodeWav } from './WavDecoder';
 import MusicVisualizer from './MusicVisualizer';
+import LrcDisplayer from './LrcDisplayer';
+import musicList from '../MusicDatabase/musicList';
 
 function AudioPlayer() {
-
+  
   const numberToTime = (number) => {
     const minutes = Math.floor(number / 60);
     const seconds = Math.floor(number % 60);
@@ -24,8 +26,64 @@ function AudioPlayer() {
   const [musicFormat, setMusicFormat] = useState(null); // music format: wav, mp3, null
   const [currentTime, setCurrentTime] = useState(0); // for progress bar
   const [duration, setDuration] = useState(0); // for progress bar
+  const [currentMusic, setCurrentMusic] = useState(null); // for database and lyric
+
+
+  // Load music from database
+  const loadMusic = async (audioTitle) => {
+    // Find the object in the JSON data that contains the audioTitle
+    const audioObj = musicList.find(obj => obj.audioTitle === audioTitle);
+    if (!audioObj) {
+      alert(`Audio file not found for title: ${audioTitle}`);
+      return;
+    }
+  
+    // Create a new File object from the audio path in the object
+    const file = new File([await fetch(audioObj.audioPath).then(response => response.blob())], audioObj.audioPath);
+    setCurrentMusic(audioObj);
+    handleStopClick();
+    setFileName(file.name);
+    const format = file.name.substr(file.name.length - 3);
+    setAudioData(null);
+    // setAudioURL(URL.createObjectURL(file));
+    const newAudioContext = new AudioContext();
+    switch (format.toLowerCase()) {
+      case 'wav':
+        setMusicFormat('wav');
+        const decodedData = await DecodeWav(file);
+        setAudioData(decodedData);
+        setAudioBuffer(newAudioContext.createBuffer(decodedData.numChannels, decodedData.audioData.length / decodedData.numChannels, decodedData.sampleRate))
+        setDuration(decodedData.duration);
+        break;
+      case 'mp3':
+      case 'aac':
+      case 'ogg':
+        setMusicFormat(format.toLowerCase());
+        const response = await fetch(URL.createObjectURL(file));
+        const arrayBuffer = await response.arrayBuffer();
+        const decodedAudioData = await newAudioContext.decodeAudioData(arrayBuffer);
+        setAudioData(decodedAudioData);
+        setAudioBuffer(decodedAudioData);
+        setDuration(decodedAudioData.duration);
+        break;
+      default:
+        alert('Unsupported file format, we only support wav, mp3, aac, ogg');
+        setAudioData(null);
+        setAudioSource(null);
+        setAudioContext(null);
+        setMusicFormat(null);
+        return;
+    }
+    if (audioSource !== null) {
+      audioSource.stop();
+    }
+    newAudioContext.close();
+  };
+  
+  
 
   const handleFileChange = async (event) => {
+    setCurrentMusic(null);
     handleStopClick();
     var file = event.target.files[0];
     setFileName(file.name);
@@ -33,15 +91,17 @@ function AudioPlayer() {
     setAudioData(null);
     // setAudioURL(URL.createObjectURL(file));
     const newAudioContext = new AudioContext();
-    switch (format) {
-        case 'wav'||'WAV':
+    switch (format.toLowerCase()) {
+        case 'wav':
             setMusicFormat('wav');
             const decodedData = await DecodeWav(file);
             setAudioData(decodedData);
             setAudioBuffer(newAudioContext.createBuffer(decodedData.numChannels, decodedData.audioData.length / decodedData.numChannels, decodedData.sampleRate))
             setDuration(decodedData.duration);
             break;
-        case 'mp3'||'MP3'||'acc'||'AAC'||'ogg'||'OGG':
+        case 'mp3':
+        case 'aac':
+        case 'ogg':
           setMusicFormat(format.toLowerCase());
             const response = await fetch(URL.createObjectURL(event.target.files[0]));
             const arrayBuffer = await response.arrayBuffer();
@@ -51,7 +111,7 @@ function AudioPlayer() {
             setDuration(decodedAudioData.duration);
             break;
         default:
-            alert('Unsupported file format, we only support wav, mp3, acc, ogg');
+            alert('Unsupported file format, we only support wav, mp3, aac, ogg');
             setAudioData(null);
             setAudioSource(null);
             setAudioContext(null);
@@ -66,6 +126,7 @@ function AudioPlayer() {
   
   // Play Music
   const handlePlayClick = () => {
+
     if (isPlayingMusic === true) return;
     if (musicFormat === null) return;
     setIsPlayingMusic(true);
@@ -143,7 +204,7 @@ function AudioPlayer() {
     const gainNode = audioContext.createGain();
     console.log('volumeLevel: ', volumeLevel);
     gainNode.gain.value = volumeLevel;
-    gainNode.connect(audioContext.destination);
+    gainNode.connect(analyser);
     audioSource.disconnect();
     audioSource.connect(gainNode);
     }
@@ -222,7 +283,29 @@ function AudioPlayer() {
   
   return (
     <div>
-      <input type="file" onChange={handleFileChange} />
+      <div>
+        <h3>Select Music from database 
+        {musicList.map((music, index) => {
+          return (
+            <div key={index}>
+              <button onClick={() => {loadMusic(music.audioTitle)}}>{music.audioTitle}</button>
+            </div>
+          )
+        }
+        )}
+        </h3>
+      </div>
+
+      <h3>Select music from your computer <input type="file" onChange={handleFileChange}/> </h3>
+      <br></br>
+      <h2>{currentMusic === null ? fileName : currentMusic.audioTitle}</h2>
+      <p>Artist: {currentMusic === null ? "unknown" : currentMusic.artist}</p>
+      <p>Album: {currentMusic === null ? "unknown" : currentMusic.album}</p>
+      <div>
+      {currentMusic !== null && currentMusic.coverPhotoPath !== '' && currentMusic.coverPhotoPath !== undefined &&
+        <img src={currentMusic.coverPhotoPath} alt="coverPhoto" style={{width: "200px", height: "200px"}}></img>
+      }
+      </div>
       <button onClick={handlePlayClick} disabled={isPlayingMusic || (!audioData)}>
         Play
       </button>
@@ -247,15 +330,13 @@ function AudioPlayer() {
           min="0"
           max={audioData ? audioData.duration : 0}
           step="0.01"
-          style={{width: "400px"}}
+          style={{width: "300px"}}
           onChange={setProgressBar}
           >
         </input>
-        <p>{numberToTime(currentTime)} / {numberToTime(duration)}</p>
+        {numberToTime(currentTime)} / {numberToTime(duration)}
       </div>
-
-      {/* <canvas ref={canvasRef} width={500} height={200} /> */}
-
+      {currentMusic !== null && <LrcDisplayer music={currentMusic} currentTime={currentTime} /> }
       
       <MusicVisualizer audioContext={audioContext} analyser={analyser} width={400} height={200} />
       

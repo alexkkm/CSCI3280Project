@@ -1,0 +1,36 @@
+[
+    {
+        "audioPath": "/Music/Counting Stars - OneRepublic Alex Goot Chrissy Costanza KHS.mp3",
+        "audioTitle": "Counting Stars",
+        "timeLength": "3:00",
+        "artist": "Alex Goot Chrissy Costanza KHS",
+        "album": "none",
+        "lyricsPath": "/Lyrics/Counting Stars - OneRepublic Alex Goot Chrissy Costanza KHS.txt",
+        "coverPhotoPath": "/Cover/Counting Stars - OneRepublic Alex Goot Chrissy Costanza KHS.png"
+    },
+    {
+        "audioPath": "/Music/Rick Astley - Never Gonna Give You Up.mp3",
+        "audioTitle": "Never Gonna Give You Up",
+        "timeLength": "3:00",
+        "artist": "Rick Astley",
+        "album": "single",
+        "lyricsPath": "Lyrics/Rick Astley - Never Gonna Give You Up.lrc",
+        "coverPhotoPath": "/Cover/Rick Astley - Never Gonna Give You Up.jpeg"
+    },
+    {
+        "audioPath": "/Music/周杰倫 告白氣球.mp3",
+        "audioTitle": "告白氣球",
+        "timeLength": "3:00",
+        "artist": "周杰倫",
+        "album": "周杰倫的床邊故事",
+        "lyricsPath": "Lyrics/周杰倫 告白氣球.lrc",
+        "coverPhotoPath": "Cover/周杰倫 告白氣球.jpeg"
+    },
+    {
+        "audioPath": "/Music/ MC 張天賦  記憶棉.mp3",
+        "audioTitle": "記憶棉",
+        "artist": "MC 張天賦"
+    }
+
+  ]
+  
