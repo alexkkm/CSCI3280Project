@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { DecodeWav } from './WavDecoder';
+import MusicVisualizer from './MusicVisualizer';
 
 function AudioPlayer() {
 
@@ -11,15 +12,15 @@ function AudioPlayer() {
     return `${minutesString}:${secondsString}`;
   };
 
-  const canvasRef = useRef(null);
-
   const [fileName, setFileName] = useState(null);
+  // const [audioURL, setAudioURL] = useState(null);
   const [audioBuffer, setAudioBuffer] = useState(null);
   const [audioData, setAudioData] = useState(null); // wav audio data
   const [audioSource, setAudioSource] = useState(null); // the audio
   const [isPlayingMusic, setIsPlayingMusic] = useState(false); // is music paying
   const [volumeLevel, setVolumeLevel] = useState(0.5); // music volume level
   const [audioContext, setAudioContext] = useState(null); // holder of the audio and properties
+  const [analyser, setAnalyser] = useState(null);
   const [musicFormat, setMusicFormat] = useState(null); // music format: wav, mp3, null
   const [currentTime, setCurrentTime] = useState(0); // for progress bar
   const [duration, setDuration] = useState(0); // for progress bar
@@ -30,6 +31,7 @@ function AudioPlayer() {
     setFileName(file.name);
     const format = file.name.substr(file.name.length - 3);
     setAudioData(null);
+    // setAudioURL(URL.createObjectURL(file));
     const newAudioContext = new AudioContext();
     switch (format) {
         case 'wav'||'WAV':
@@ -79,39 +81,11 @@ function AudioPlayer() {
       if (audioContext === null) newAudioContext = new AudioContext();
       else newAudioContext = audioContext;
 
-      // Analyser
+      // set analyser
       const analyser = newAudioContext.createAnalyser();
+      analyser.fftSize = 256;
       analyser.connect(newAudioContext.destination);
-      analyser.fftSize = 2048;
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-      const canvas = canvasRef.current;
-      const canvasCtx = canvas.getContext('2d');
-      const draw = () => {
-        const drawVisual = requestAnimationFrame(draw);
-        analyser.getByteTimeDomainData(dataArray);
-        canvasCtx.fillStyle = 'rgb(200, 200, 200)';
-        canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
-        canvasCtx.lineWidth = 2;
-        canvasCtx.strokeStyle = 'rgb(0, 0, 0)';
-        canvasCtx.beginPath();
-        const sliceWidth = canvas.width * 1.0 / bufferLength;
-        let x = 0;
-        for (let i = 0; i < bufferLength; i++) {
-          const v = dataArray[i] / 128.0;
-          const y = v * canvas.height / 2;
-          if (i === 0) {
-            canvasCtx.moveTo(x, y);
-          } else {
-            canvasCtx.lineTo(x, y);
-          }
-          x += sliceWidth;
-        }
-        canvasCtx.lineTo(canvas.width, canvas.height / 2);
-        canvasCtx.stroke();
-      };
-      draw();
-      
+      setAnalyser(analyser);
 
       // set volume
       const gainNode = newAudioContext.createGain();
@@ -196,10 +170,17 @@ function AudioPlayer() {
     }
     else newAudioContext = audioContext;
 
-    // set volume
-    const gainNode = newAudioContext.createGain();
-    gainNode.gain.value = volumeLevel;
-    gainNode.connect(newAudioContext.destination);
+      // set analyser
+      const analyser = newAudioContext.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.connect(newAudioContext.destination);
+      setAnalyser(analyser);
+
+      // set volume
+      const gainNode = newAudioContext.createGain();
+      gainNode.gain.value = volumeLevel;
+      gainNode.connect(analyser);
+
     if (musicFormat === 'wav') 
     for (let channel = 0; channel < audioData.numChannels; channel++) {
       const channelData = audioBuffer.getChannelData(channel);
@@ -220,31 +201,23 @@ function AudioPlayer() {
     updateProgressBar();
   }
 
-  const updateProgressBar = () => {
+  const updateProgressBar = useCallback(() => {
     const progressBar = document.getElementById('progressBar');
     let duration = audioData ? audioData.duration : 0;
-    //console.log('duration: ', duration);
-    let time=0;
-    // console.log('offset: ', offset);
-    time = audioContext.currentTime - audioSource.context.baseLatency + parseFloat(offset);
-    // console.log('time: ', time);
+    let time = audioContext.currentTime - audioSource.context.baseLatency + parseFloat(offset);
     if (time > duration) {
       time = duration;
     }
-    // console.log('currentTime: ', time);
     progressBar.value = time;
     setCurrentTime(time);
-  }
+  }, [audioContext, audioData, audioSource, offset]);
+
   useEffect(() => {
-    // if isplayingmusic is true, then keep updating the progress bar every 0.1 second until it is false
     if (isPlayingMusic) {
-      const interval = setInterval(() => {
-        updateProgressBar();
-      }
-      , 10);
+      const interval = setInterval(updateProgressBar, 10);
       return () => clearInterval(interval);
     }
-  }, [isPlayingMusic, audioContext, audioSource, offset]);
+  }, [isPlayingMusic, updateProgressBar]);
 
   
   return (
@@ -280,9 +253,12 @@ function AudioPlayer() {
         </input>
         <p>{numberToTime(currentTime)} / {numberToTime(duration)}</p>
       </div>
-      
-      <canvas ref={canvasRef} width={500} height={200} />
 
+      {/* <canvas ref={canvasRef} width={500} height={200} /> */}
+
+      
+      <MusicVisualizer audioContext={audioContext} analyser={analyser} width={400} height={200} />
+      
       {audioData && (
         <div>
           <p>File Name: {fileName}</p>
