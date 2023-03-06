@@ -20,7 +20,7 @@ function AudioPlayer() {
   const [isPlayingMusic, setIsPlayingMusic] = useState(false); // is music paying
   const [volumeLevel, setVolumeLevel] = useState(0.5); // music volume level
   const [audioContext, setAudioContext] = useState(null); // holder of the audio and properties
-  const [analyser, setAnalyser] = useState(null);
+  const [analyser, setAnalyser] = useState(null); // for music visualizer
   const [musicFormat, setMusicFormat] = useState(null); // music format: wav, mp3, null
   const [currentTime, setCurrentTime] = useState(0); // for progress bar
   const [duration, setDuration] = useState(0); // for progress bar
@@ -41,8 +41,8 @@ function AudioPlayer() {
             setAudioBuffer(newAudioContext.createBuffer(decodedData.numChannels, decodedData.audioData.length / decodedData.numChannels, decodedData.sampleRate))
             setDuration(decodedData.duration);
             break;
-        case 'mp3'||'MP3':
-          setMusicFormat('mp3');
+        case 'mp3'||'MP3'||'acc'||'AAC'||'ogg'||'OGG':
+          setMusicFormat(format.toLowerCase());
             const response = await fetch(URL.createObjectURL(event.target.files[0]));
             const arrayBuffer = await response.arrayBuffer();
             const decodedAudioData = await newAudioContext.decodeAudioData(arrayBuffer);
@@ -51,7 +51,7 @@ function AudioPlayer() {
             setDuration(decodedAudioData.duration);
             break;
         default:
-            alert('Unsupported file format, we only support wav or mp3');
+            alert('Unsupported file format, we only support wav, mp3, acc, ogg');
             setAudioData(null);
             setAudioSource(null);
             setAudioContext(null);
