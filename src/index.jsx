@@ -3,28 +3,14 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import AudioPlayer from './AudioScript/AudioPlayer';
 
-
 // Addictional decoration 
-//import './index.css';
-
-// Index Page component
-class Index extends React.Component {
-  render() {
-    return (
-      <div className="App">
-        <h1 id='title' >Music Player</h1>
-        <p>CSCI3280 project</p>
-      </div>
-    );
-  }
-}
+import './index.css';
 
 // App() function are the main function of the webpage
 export default function App() {
   return (
     // React Router
-    <div>
-    <Index />
+    <div id="mainApp">
     <AudioPlayer/>
     </div>
   );

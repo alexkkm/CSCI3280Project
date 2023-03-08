@@ -1,0 +1,15 @@
+#mainApp{
+    background-color: black;
+    background-image: url(./asserts/background_pic.png);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+}
+
+h3{
+    color: aliceblue;
+}
+
+p{
+    color: aliceblue;
+}
