@@ -417,24 +417,26 @@ function AudioPlayer() {
 
   return (
     <div id="audioPlayer">
-      <div className="container-fluid">
-        <div className="row">
+      <div className="container">
+        <div className="row align-items-center">
           {/* Top left block: Cover photo and visualizer. */}
-          <div className="col-lg-6 col-md-12">
-            <div className="col-lg-6 col-md-12" id='topLeft'>
+          <section className=" col-lg-7 col-md-12 p-1 p-lg-5" id='topLeft'>
+            <div className="d-flex flex-column align-items-center">
+              <MusicVisualizer class="mx-auto d-block" audioContext={audioContext} analyser={analyser} width={450} height={50}/>
+
               {currentMusic !== null && currentMusic.coverPhotoPath !== '' && currentMusic.coverPhotoPath !== undefined &&
-                <img src={currentMusic.coverPhotoPath} alt="coverPhoto" style={{ width: "200px", height: "200px" }}></img>
+                <img src={currentMusic.coverPhotoPath} alt="coverPhoto" style={{ width: "450px", height: "450px" }}></img>
               }
             </div>
-
-            <MusicVisualizer audioContext={audioContext} analyser={analyser} width={400} height={200} />
-          </div>
+          </section>
 
 
           {/* Top right block: Lyrics. */}
-          <div className="col-lg-6 col-md-12 order-md-3" id='topRight'>
-            {currentMusic !== null && <LrcDisplayer music={currentMusic} currentTime={currentTime} />}
-          </div>
+          <section className="col-lg-5 col-md-12 p-1 p-lg-5" id='topRight'>
+            <div className="d-flex flex-column align-items-center">
+              {currentMusic !== null && <LrcDisplayer music={currentMusic} currentTime={currentTime} />}
+            </div>
+          </section>
         </div>
 
         <div className="row flex-grow-1">

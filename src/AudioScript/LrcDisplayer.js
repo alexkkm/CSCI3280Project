@@ -92,7 +92,7 @@ function LrcDisplayer({ music, currentTime }) {
   const lyricsToDisplay = getLyricsToDisplay();
 
   return (
-    <div style={{ maxHeight: '200px', maxWidth: '400px', overflow: 'auto' }}>
+    <div style={{ maxHeight: '400px', maxWidth: '400px', overflow: 'auto' }}>
       {lyricsToDisplay.map((lyric, index) => (
         <p key={index} style={lyricsTextFilePath.substring(lyricsTextFilePath.length - 4) === '.txt' ? 
           { textAlign: 'center', whiteSpace: 'pre-wrap' } :
