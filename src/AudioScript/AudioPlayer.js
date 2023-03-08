@@ -27,6 +27,7 @@ function AudioPlayer() {
     const [currentTime, setCurrentTime] = useState(0); // for progress bar
     const [duration, setDuration] = useState(0); // for progress bar
     const [currentMusic, setCurrentMusic] = useState(null); // for database and lyric
+    const [playMode , setPlayMode] = useState('single'); // for play mode, single, loop, random
 
 
     // Load music from database
@@ -77,7 +78,7 @@ function AudioPlayer() {
         if (audioSource !== null) {
             audioSource.stop();
         }
-        newAudioContext.close();
+        newAudioContext.close();      
     };
 
 
@@ -126,9 +127,10 @@ function AudioPlayer() {
 
     // Play Music
     const handlePlayClick = () => {
-
         if (isPlayingMusic === true) return;
         if (musicFormat === null) return;
+
+        console.log('play');
         setIsPlayingMusic(true);
         if (audioSource !== null && audioSource.context.state === 'suspended') {
             // resume audio
@@ -281,13 +283,144 @@ function AudioPlayer() {
     }, [isPlayingMusic, updateProgressBar]);
 
 
+    // handle PlayMode
+    useEffect(() => {
+        if (audioContext === null) return;
+        
+        const loadAndPlayMusic = async (audioTitle) => {
+
+            // Find the object in the JSON data that contains the audioTitle
+        const audioObj = musicList.find(obj => obj.audioTitle === audioTitle);
+        if (!audioObj) {
+            alert(`Audio file not found for title: ${audioTitle}`);
+            return;
+        }
+
+        // Create a new File object from the audio path in the object
+        const file = new File([await fetch(audioObj.audioPath).then(response => response.blob())], audioObj.audioPath);
+        setCurrentMusic(audioObj);
+        if (audioSource !== null) {
+            audioSource.stop();
+            setAudioSource(null);
+        }
+        if (audioContext !== null) {
+            audioContext.close();
+            setAudioContext(null);
+        }
+        setOffset(0);
+        document.getElementById('progressBar').value = 0;
+        setCurrentTime(0);
+        setFileName(file.name);
+        const format = file.name.substr(file.name.length - 3);
+        let decodedAudioData;
+        let decodedAudioBuffer;
+        setAudioData(null);
+        // setAudioURL(URL.createObjectURL(file));
+        const new2AudioContext = new AudioContext();
+        switch (format.toLowerCase()) {
+        case 'wav':
+            setMusicFormat('wav');
+            decodedAudioData = await DecodeWav(file);
+            setAudioData(decodedAudioData);
+            decodedAudioBuffer = (new2AudioContext.createBuffer(decodedAudioData.numChannels, decodedAudioData.audioData.length / decodedAudioData.numChannels, decodedAudioData.sampleRate))
+            setAudioBuffer(decodedAudioBuffer);
+            setDuration(decodedAudioData.duration);
+            break;
+        case 'mp3':
+        case 'aac':
+        case 'ogg':
+            setMusicFormat(format.toLowerCase());
+            const response = await fetch(URL.createObjectURL(file));
+            const arrayBuffer = await response.arrayBuffer();
+            decodedAudioData = await new2AudioContext.decodeAudioData(arrayBuffer);
+            setAudioData(decodedAudioData);
+            decodedAudioBuffer = (decodedAudioData);
+            setAudioBuffer(decodedAudioBuffer);
+            setDuration(decodedAudioData.duration);
+            break;
+        default:
+            alert('Unsupported file format, we only support wav, mp3, aac, ogg');
+            setAudioData(null);
+            setAudioSource(null);
+            setAudioContext(null);
+            setMusicFormat(null);
+            return;
+        }
+        if (audioSource !== null) {
+            audioSource.stop();
+        }
+        new2AudioContext.close();
+
+            setIsPlayingMusic(true);
+
+            // play a new audio
+            setCurrentTime(0);
+            setOffset(0);
+            let new3AudioContext;
+            if (audioContext === null || audioContext.state === "closed") new3AudioContext = new AudioContext();
+            else new3AudioContext = audioContext;
+
+            // set analyser
+            const analyser = new3AudioContext.createAnalyser();
+            analyser.fftSize = 256;
+            analyser.connect(new3AudioContext.destination);
+            setAnalyser(analyser);
+
+            // set volume
+            const gainNode = new3AudioContext.createGain();
+            gainNode.gain.value = volumeLevel;
+            gainNode.connect(analyser);
+            
+            if (musicFormat === 'wav') {
+                for (let channel = 0; channel < decodedAudioData.numChannels; channel++) {
+                    const channelData = decodedAudioBuffer.getChannelData(channel);
+                    for (let i = 0; i < decodedAudioData.decodedAudioData.length; i += decodedAudioData.numChannels) {
+                        channelData[i / decodedAudioData.numChannels] = decodedAudioData.decodedAudioData[i + channel];
+                    }
+                }
+            }
+            const sourceNode = new3AudioContext.createBufferSource();    
+            sourceNode.buffer = decodedAudioBuffer;
+            sourceNode.connect(gainNode);
+            sourceNode.start();
+            setAudioSource(sourceNode);
+            setAudioContext(new3AudioContext);
+        };
+
+        const handleEnd = () => {
+          setIsPlayingMusic(false);
+          setCurrentTime(0);
+      
+          switch (playMode) {
+            case 'single':
+                audioSource.stop();
+                break;
+            case 'loop': 
+                loadAndPlayMusic(currentMusic.audioTitle);
+                break;
+            case 'random':
+                const randomIndex = Math.floor(Math.random() * musicList.length);
+                const randomMusic = musicList[randomIndex];
+                loadAndPlayMusic(randomMusic.audioTitle);
+                break;
+            default:
+                break;
+            }
+        };
+      
+        audioSource.addEventListener('ended', handleEnd);
+        return () => audioSource.removeEventListener('ended', handleEnd);
+        }, [audioContext, audioData, audioSource, currentMusic, musicFormat, playMode, volumeLevel]);
+        
+
+
     return (
         <div>
-            <div class="container-fluid">
-                <div class="row">
+            <div className="container-fluid">
+                <div className="row">
                     {/* Top left block: Cover photo and visualizer. */}
-                    <div class="col-lg-6 col-md-12">
-                        <div class="col-lg-6 col-md-12" id='topLeft'>
+                    <div className="col-lg-6 col-md-12">
+                        <div className="col-lg-6 col-md-12" id='topLeft'>
                             {currentMusic !== null && currentMusic.coverPhotoPath !== '' && currentMusic.coverPhotoPath !== undefined &&
                                 <img src={currentMusic.coverPhotoPath} alt="coverPhoto" style={{width: "200px", height: "200px"}}></img>
                             }
@@ -298,14 +431,14 @@ function AudioPlayer() {
 
 
                     {/* Top right block: Lyrics. */}
-                    <div class="col-lg-6 col-md-12 order-md-3" id='topRight'>
+                    <div className="col-lg-6 col-md-12 order-md-3" id='topRight'>
                         {currentMusic !== null && <LrcDisplayer music={currentMusic} currentTime={currentTime} /> }
                     </div>
                 </div>
 
-                <div class="row flex-grow-1">
+                <div className="row flex-grow-1">
                     {/* Upper bottom: Song list and uploding. */}
-                    <div class="col-md-12" id='upperBottom'>
+                    <div className="col-md-12" id='upperBottom'>
                         <div>
                             <h3>Select Music from database 
                             {musicList.map((music, index) => {
@@ -323,9 +456,9 @@ function AudioPlayer() {
                     </div>
                 </div>
                 
-                <div class="row">
+                <div className="row">
                     {/* Bottom block: Audio information and control. */}
-                    <div class="col-md-12" id='bottom'>
+                    <div className="col-md-12" id='bottom'>
                         <h2>{currentMusic === null ? fileName : currentMusic.audioTitle}</h2>
                         <p>Artist: {currentMusic === null ? "unknown" : currentMusic.artist}</p>
                         <p>Album: {currentMusic === null ? "unknown" : currentMusic.album}</p>
@@ -348,6 +481,10 @@ function AudioPlayer() {
                             value={volumeLevel}
                             onChange={handleVolumeChange}
                         />
+                        <button onClick={()=>{setPlayMode('single')}} disabled={playMode === 'single'}>Single</button>
+                        <button onClick={()=>{setPlayMode('loop')}} disabled={playMode === 'loop'}>Loop</button>
+                        <button onClick={()=>{setPlayMode('random')}} disabled={playMode === 'random'}>Random</button>
+                        {" " + playMode}
                         <div>
                             <input
                             type="range"
