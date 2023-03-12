@@ -453,6 +453,28 @@ export default function AudioPlayer() {
                                 }
                                 )}
                             </h3>
+                            {
+                                // Adding the song list content here
+                            }
+                            <table>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Timelength</th>
+                                    <th>Artist</th>
+                                    <th>Album</th>
+                                </tr>
+                            </table>
+                            {musicList.map((music, index) => {
+                                return (
+                                    <div key={index}>
+                                        <p>{music.audioTitle}</p>
+
+                                    </div>
+                                )
+                            }
+                            )
+                            }
+
                         </div>
                         <div id="selectMusic">
                             <h3>Select music from your computer <input type="file" onChange={handleFileChange} /> </h3>
@@ -513,18 +535,20 @@ export default function AudioPlayer() {
 
 
             {/* Debug: Audio data. */}
-            {audioData && (
-                <div>
-                    <p>File Name: {fileName}</p>
-                    <p>File Format: {musicFormat}</p>
-                    <p>Audio Format: {audioData.format}</p>
-                    <p>Number of Channels: {audioData.numChannels}</p>
-                    <p>Sample Rate: {audioData.sampleRate}</p>
-                    <p>Byte Rate: {audioData.byteRate}</p>
-                    <p>Block Align: {audioData.blockAlign}</p>
-                    <p>Bit Depth: {audioData.bitDepth}</p>
-                </div>
-            )}
-        </div>
+            {
+                audioData && (
+                    <div>
+                        <p>File Name: {fileName}</p>
+                        <p>File Format: {musicFormat}</p>
+                        <p>Audio Format: {audioData.format}</p>
+                        <p>Number of Channels: {audioData.numChannels}</p>
+                        <p>Sample Rate: {audioData.sampleRate}</p>
+                        <p>Byte Rate: {audioData.byteRate}</p>
+                        <p>Block Align: {audioData.blockAlign}</p>
+                        <p>Bit Depth: {audioData.bitDepth}</p>
+                    </div>
+                )
+            }
+        </div >
     );
 }
