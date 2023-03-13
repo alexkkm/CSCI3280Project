@@ -5,6 +5,7 @@ import LrcDisplayer from './LrcDisplayer';
 import musicList from '../MusicDatabase/musicList';
 import "../index.css"
 
+
 export default function AudioPlayer() {
 
     const numberToTime = (number) => {
@@ -447,16 +448,20 @@ export default function AudioPlayer() {
                             {
                                 // Adding the song list content here
                             }
+                            <table>
+                                <tr>
+                                    <th><h3>Title</h3></th>
+                                    <th><h3>Time Length</h3></th>
+                                    <th><h3>Artist</h3></th>
+                                    <th><h3>Album</h3></th>
+                                </tr>
+                            </table>
+
                             {musicList.map((music, index) => {
                                 return (
+
                                     <div key={index}>
                                         <table id="songListTable" >
-                                            <tr>
-                                                <th><h3>Title</h3></th>
-                                                <th><h3>Time Length</h3></th>
-                                                <th><h3>Artist</h3></th>
-                                                <th><h3>Album</h3></th>
-                                            </tr>
                                             <tr>
                                                 <th>
                                                     <button onClick={() => { loadMusic(music.audioTitle) }}>{music.audioTitle}</button>
