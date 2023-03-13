@@ -13,11 +13,11 @@ function LrcDisplayer({ music, currentTime }) {
     }
     // fetch lyrics text file and parse it
     if (lyricsTextFilePath.substring(lyricsTextFilePath.length - 4) === '.txt') {
-        // fetch lyrics text file and set as lyrics state variable
-        fetch(lyricsTextFilePath)
-          .then(response => response.text())
-          .then(text => setLyrics([{ time: 0, text }]));
-    }      
+      // fetch lyrics text file and set as lyrics state variable
+      fetch(lyricsTextFilePath)
+        .then(response => response.text())
+        .then(text => setLyrics([{ time: 0, text }]));
+    }
     else { // lrc file
       fetch(lyricsTextFilePath)
         .then(response => response.text())
@@ -41,7 +41,7 @@ function LrcDisplayer({ music, currentTime }) {
           }, []);
           setLyrics(parsedLyrics);
         });
-      }
+    }
   }, [lyricsTextFilePath]);
 
   useEffect(() => {
@@ -94,7 +94,7 @@ function LrcDisplayer({ music, currentTime }) {
   return (
     <div style={{ maxHeight: '400px', maxWidth: '400px', overflow: 'auto' }}>
       {lyricsToDisplay.map((lyric, index) => (
-        <p key={index} style={lyricsTextFilePath.substring(lyricsTextFilePath.length - 4) === '.txt' ? 
+        <p key={index} style={lyricsTextFilePath.substring(lyricsTextFilePath.length - 4) === '.txt' ?
           { textAlign: 'center', whiteSpace: 'pre-wrap' } :
           { textAlign: 'center', fontWeight: currentLyricsIndex === lyrics.indexOf(lyric) ? 'bold' : 'normal' }}>
           {lyric.text}

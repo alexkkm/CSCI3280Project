@@ -443,37 +443,39 @@ export default function AudioPlayer() {
                     {/* Upper bottom: Song list and uploding. */}
                     <div className="col-md-12" id='upperBottom'>
                         <div id="songList">
-                            <h3>Select Music from database
-                                {musicList.map((music, index) => {
-                                    return (
-                                        <div key={index}>
-                                            <button onClick={() => { loadMusic(music.audioTitle) }}>{music.audioTitle}</button>
-                                        </div>
-                                    )
-                                }
-                                )}
-                            </h3>
+                            <h3>Song List:</h3>
                             {
                                 // Adding the song list content here
                             }
-                            <table>
-                                <tr>
-                                    <th>Title</th>
-                                    <th>Timelength</th>
-                                    <th>Artist</th>
-                                    <th>Album</th>
-                                </tr>
-                            </table>
                             {musicList.map((music, index) => {
                                 return (
                                     <div key={index}>
-                                        <p>{music.audioTitle}</p>
+                                        <table id="songListTable" >
+                                            <tr>
+                                                <th><h3>Title</h3></th>
+                                                <th><h3>Time Length</h3></th>
+                                                <th><h3>Artist</h3></th>
+                                                <th><h3>Album</h3></th>
+                                            </tr>
+                                            <tr>
+                                                <th>
+                                                    <button onClick={() => { loadMusic(music.audioTitle) }}>{music.audioTitle}</button>
+                                                </th>
+                                                <th>
+                                                    <p>{music.timeLength}</p>
+                                                </th>
+                                                <th>
+                                                    <p>{music.artist}</p>
+                                                </th>
+                                                <th>
+                                                    <p>{music.album}</p>
+                                                </th>
+                                            </tr>
+                                        </table>
 
                                     </div>
-                                )
-                            }
-                            )
-                            }
+                                );
+                            })}
 
                         </div>
                         <div id="selectMusic">
