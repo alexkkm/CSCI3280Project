@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 function LrcDisplayer({ music, currentTime }) {
 
-  const lyricsTextFilePath = music.lyricsPath;
+  var lyricsTextFilePath = music.lyricsPath;
 
   const [lyrics, setLyrics] = useState([]);
   const [currentLyricsIndex, setCurrentLyricsIndex] = useState(-1);
@@ -13,12 +13,18 @@ function LrcDisplayer({ music, currentTime }) {
     }
     // fetch lyrics text file and parse it
     if (lyricsTextFilePath.substring(lyricsTextFilePath.length - 4) === '.txt') {
+      if (lyricsTextFilePath.substring(0, 9) === 'blob:http') 
+        lyricsTextFilePath = lyricsTextFilePath.substring(0, lyricsTextFilePath.length - 4);
       // fetch lyrics text file and set as lyrics state variable
+      console.log(lyricsTextFilePath);
       fetch(lyricsTextFilePath)
         .then(response => response.text())
         .then(text => setLyrics([{ time: 0, text }]));
     }
     else { // lrc file
+      if (lyricsTextFilePath.substring(0, 9) === 'blob:http') 
+        lyricsTextFilePath = lyricsTextFilePath.substring(0, lyricsTextFilePath.length - 4);
+      console.log(lyricsTextFilePath);
       fetch(lyricsTextFilePath)
         .then(response => response.text())
         .then(text => {
