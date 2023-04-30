@@ -2,10 +2,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import AudioPlayer from './AudioScript/AudioPlayer';
-
 // Addictional decoration 
 import './index.css';
-
+import './Server/Srv';
 // App() function are the main function of the webpage
 export default function App() {
   return (

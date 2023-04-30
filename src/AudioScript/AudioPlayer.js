@@ -491,7 +491,7 @@ export default function AudioPlayer() {
                                 Search
                             </h3>
                             <input type="text" placeholder="Keywords" style={{color:"black", width: "200px"}} onChange={handleSearchChange} />
-                        <div style={{ minHeight: '100px', maxHeight: '400px', maxWidth: '1000px', overflow: 'auto' }}>
+                        <div style={{ minHeight: '200px', maxHeight: '400px', maxWidth: '1000px', overflow: 'auto' }}>
                             {musicList.map((music) => {
                                 if (music.audioTitle.toLowerCase().includes(searchKeywords.toLowerCase(), 0) || music.artist.toLowerCase().includes(searchKeywords.toLowerCase(), 0) || music.album.toLowerCase().includes(searchKeywords.toLowerCase(), 0)) {
                                     return (
