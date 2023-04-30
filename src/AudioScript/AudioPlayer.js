@@ -3,6 +3,8 @@ import { DecodeWav } from './WavDecoder';
 import MusicVisualizer from './MusicVisualizer';
 import LrcDisplayer from './LrcDisplayer';
 import musicList from '../MusicDatabase/musicList';
+import Client from './Client';
+import io from 'socket.io-client';
 import "../index.css"
 
 export default function AudioPlayer() {
@@ -14,7 +16,7 @@ export default function AudioPlayer() {
         const secondsString = seconds < 10 ? `0${seconds}` : `${seconds}`;
         return `${minutesString}:${secondsString}`;
     };
-
+    const socket = io.connect("http://localhost:3001");
     const [fileName, setFileName] = useState(null);
     // const [audioURL, setAudioURL] = useState(null);
     const [audioBuffer, setAudioBuffer] = useState(null);
@@ -29,7 +31,8 @@ export default function AudioPlayer() {
     const [duration, setDuration] = useState(0); // for progress bar
     const [currentMusic, setCurrentMusic] = useState(null); // for database and lyric
     const [playMode, setPlayMode] = useState('single'); // for play mode, single, loop, random
-
+    const [searchKeywords, setSearch] = useState('');
+    const handleSearchChange = (event) => {setSearch(event.target.value);};
     const [title, setTitle] = useState('unknown'); // for title
     const handleTitleChange = (event) => {setTitle(event.target.value);};
     const [artist, setArtist] = useState('unknown'); // for artist
@@ -74,7 +77,6 @@ export default function AudioPlayer() {
         const fpath = URL.createObjectURL(file);
         setMusicFile(fpath);
     };
-    
 
     const [, updateState] = React.useState();
     const forceUpdate = React.useCallback(() => updateState({}), []); // force rerender
@@ -160,8 +162,6 @@ export default function AudioPlayer() {
         }
         newAudioContext.close();
     };
-
-
 
     const handleFileChange = async (event) => {
         const file = event.target.files[0];
@@ -487,21 +487,30 @@ export default function AudioPlayer() {
                 <div className="row flex-grow-1">
                     {/* Upper bottom: Song list and uploding. */}
                     <div className="col-md-12" id='upperBottom'>
-                        
-                        {musicList.map((music, index) => {
-                                return (
-                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gridGap: 20, color: "white" }}>
-                                        <div>
-                                            <button style={{background: "lightgreen"}} onClick={() => { loadAndPlayMusic(music.audioTitle) }}>play</button>
-                                            <button style={{background: "pink"}} onClick={() => { deleteMusic(music.audioTitle) }}>delete</button>
-                                            {music.audioTitle}
+                            <h3> 
+                                Search
+                            </h3>
+                            <input type="text" placeholder="Keywords" style={{color:"black", width: "200px"}} onChange={handleSearchChange} />
+                        <div style={{ minHeight: '100px', maxHeight: '400px', maxWidth: '1000px', overflow: 'auto' }}>
+                            {musicList.map((music) => {
+                                if (music.audioTitle.toLowerCase().includes(searchKeywords.toLowerCase(), 0) || music.artist.toLowerCase().includes(searchKeywords.toLowerCase(), 0) || music.album.toLowerCase().includes(searchKeywords.toLowerCase(), 0)) {
+                                    return (
+                                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gridGap: 20, color: "white" }}>
+                                            <div>
+                                                <button style={{background: "lightgreen"}} onClick={() => { loadAndPlayMusic(music.audioTitle) }}>play</button>
+                                                <button style={{background: "pink"}} onClick={() => { deleteMusic(music.audioTitle) }}>delete</button>
+                                                {music.audioTitle}
+                                            </div>
+                                            <div>{music.artist}</div>
+                                            <div>{music.album}</div>
                                         </div>
-                                        <div>{music.artist}</div>
-                                        <div>{music.album}</div>
-                                    </div>
-                                );
+                                    );
+                                }
+                                return null;
                             })}
+                        </div>
                         <div id="selectMusic" style={{marginTop: "20px"}}>
+                        
                             <h3>
                                 Add music from your computer 
                             </h3>
@@ -575,10 +584,10 @@ export default function AudioPlayer() {
                     </div>
                 </div>
                 <div style={{height:"250px"}}>
-
+                    <Client/>
                 </div>
             </div>
-
+            
 
 
 
