@@ -14,7 +14,7 @@
         "timeLength": "3:00",
         "artist": "Rick Astley",
         "album": "single",
-        "lyricsPath": "Lyrics/Rick Astley - Never Gonna Give You Up.lrc",
+        "lyricsPath": "/Lyrics/Rick Astley - Never Gonna Give You Up.lrc",
         "coverPhotoPath": "/Cover/Rick Astley - Never Gonna Give You Up.jpeg"
     },
     {
@@ -23,14 +23,13 @@
         "timeLength": "3:00",
         "artist": "周杰倫",
         "album": "周杰倫的床邊故事",
-        "lyricsPath": "Lyrics/周杰倫 告白氣球.lrc",
-        "coverPhotoPath": "Cover/周杰倫 告白氣球.jpeg"
+        "lyricsPath": "/Lyrics/周杰倫 告白氣球.lrc",
+        "coverPhotoPath": "/Cover/周杰倫 告白氣球.jpeg"
     },
     {
         "audioPath": "/Music/ MC 張天賦  記憶棉.mp3",
         "audioTitle": "記憶棉",
         "artist": "MC 張天賦"
     }
-
-  ]
+]
   

@@ -3,6 +3,7 @@ import { DecodeWav } from './WavDecoder';
 import MusicVisualizer from './MusicVisualizer';
 import LrcDisplayer from './LrcDisplayer';
 import musicList from '../MusicDatabase/musicList';
+import io from 'socket.io-client';
 import "../index.css"
 
 
@@ -30,60 +31,49 @@ export default function AudioPlayer() {
     const [duration, setDuration] = useState(0); // for progress bar
     const [currentMusic, setCurrentMusic] = useState(null); // for database and lyric
     const [playMode, setPlayMode] = useState('single'); // for play mode, single, loop, random
+    const [combinedResults, setCombinedResults] = useState([]);
 
 
-    // Load music from database
     const loadMusic = async (audioTitle) => {
-        // Find the object in the JSON data that contains the audioTitle
-        const audioObj = musicList.find(obj => obj.audioTitle === audioTitle);
-        if (!audioObj) {
-            alert(`Audio file not found for title: ${audioTitle}`);
-            return;
-        }
-
-        // Create a new File object from the audio path in the object
-        const file = new File([await fetch(audioObj.audioPath).then(response => response.blob())], audioObj.audioPath);
-        setCurrentMusic(audioObj);
-        handleStopClick();
-        setFileName(file.name);
-        const format = file.name.substr(file.name.length - 3);
-        setAudioData(null);
-        // setAudioURL(URL.createObjectURL(file));
-        const newAudioContext = new AudioContext();
-        switch (format.toLowerCase()) {
-            case 'wav':
-                setMusicFormat('wav');
-                const decodedData = await DecodeWav(file);
-                setAudioData(decodedData);
-                setAudioBuffer(newAudioContext.createBuffer(decodedData.numChannels, decodedData.audioData.length / decodedData.numChannels, decodedData.sampleRate))
-                setDuration(decodedData.duration);
-                break;
-            case 'mp3':
-            case 'aac':
-            case 'ogg':
-                setMusicFormat(format.toLowerCase());
-                const response = await fetch(URL.createObjectURL(file));
-                const arrayBuffer = await response.arrayBuffer();
-                const decodedAudioData = await newAudioContext.decodeAudioData(arrayBuffer);
-                setAudioData(decodedAudioData);
-                setAudioBuffer(decodedAudioData);
-                setDuration(decodedAudioData.duration);
-                break;
-            default:
-                alert('Unsupported file format, we only support wav, mp3, aac, ogg');
-                setAudioData(null);
-                setAudioSource(null);
-                setAudioContext(null);
-                setMusicFormat(null);
-                return;
-        }
-        if (audioSource !== null) {
-            audioSource.stop();
-        }
-        newAudioContext.close();
-    };
-
-
+		// Find the object in the JSON data that contains the audioTitle
+		const audioObj = musicList.find(obj => obj.audioTitle === audioTitle);
+		if (!audioObj) {
+			alert(`Audio file not found for title: ${audioTitle}`);
+			return;
+		}
+	
+		setCurrentMusic(audioObj);
+		handleStopClick();
+		setFileName(audioObj.audioTitle);
+		const format = audioObj.audioPath.substr(audioObj.audioPath.length - 3);
+		setAudioData(null);
+		const newAudioContext = new AudioContext();
+		switch (format.toLowerCase()) {
+			case 'wav':
+			case 'mp3':
+			case 'aac':
+			case 'ogg':
+				setMusicFormat(format.toLowerCase());
+				const response = await fetch(audioObj.audioPath);
+				const arrayBuffer = await response.arrayBuffer();
+				const decodedAudioData = await newAudioContext.decodeAudioData(arrayBuffer);
+				setAudioData(decodedAudioData);
+				setAudioBuffer(decodedAudioData);
+				setDuration(decodedAudioData.duration);
+				break;
+			default:
+				alert('Unsupported file format, we only support wav, mp3, aac, ogg');
+				setAudioData(null);
+				setAudioSource(null);
+				setAudioContext(null);
+				setMusicFormat(null);
+				return;
+		}
+		if (audioSource !== null) {
+			audioSource.stop();
+		}
+		newAudioContext.close();
+	};
 
     const handleFileChange = async (event) => {
         setCurrentMusic(null);
@@ -414,7 +404,42 @@ export default function AudioPlayer() {
         return () => audioSource.removeEventListener('ended', handleEnd);
     }, [audioContext, audioData, audioSource, currentMusic, musicFormat, playMode, volumeLevel]);
 
+    const mergeLocalAndNetworkResults = (networkResults) => {
+        const mergedResults = [...musicList];
+        networkResults.forEach((networkResult) => {
+            const duplicateIndex = mergedResults.findIndex(
+                (localResult) => localResult.audioTitle === networkResult.audioTitle
+            );
+            if (duplicateIndex === -1) {
+                mergedResults.push(networkResult);
+            }
+        });
+        return mergedResults;
+    };
 
+    // Socket connection and event listeners
+    useEffect(() => {
+        const socket = io('http://localhost:3001');
+
+        socket.on('connect', () => {
+            console.log('Connected to the server');
+        });
+
+        socket.on('search-result', (searchResults) => {
+            const combinedResults = mergeLocalAndNetworkResults(searchResults);
+            setCombinedResults(combinedResults);
+        });
+
+        return () => {
+            socket.disconnect();
+            console.log('Disconnected from the server');
+        };
+    }, []);
+
+    // Initialize the combinedResults with the local musicList
+    useEffect(() => {
+        setCombinedResults(musicList);
+    }, []);
 
     return (
         <div id="audioPlayer">
@@ -449,15 +474,17 @@ export default function AudioPlayer() {
                                 // Adding the song list content here
                             }
                             <table>
-                                <tr>
+                                <thead>
+                                    <tr>
                                     <th><h3>Title</h3></th>
                                     <th><h3>Time Length</h3></th>
                                     <th><h3>Artist</h3></th>
                                     <th><h3>Album</h3></th>
-                                </tr>
+                                    </tr>
+                                </thead>
                             </table>
 
-                            {musicList.map((music, index) => {
+                            {combinedResults.map((music, index) => {
                                 return (
 
                                     <div key={index}>
