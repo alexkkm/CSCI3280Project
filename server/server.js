@@ -5,16 +5,19 @@ const cors = require('cors');
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+	origin: ["http://localhost:3000", "https://alexkkm.github.io"],
+	credentials: true,
+}));
 
 const server = http.createServer(app);
 const io = require('socket.io')(server, {
-	cors: {
-		origin: 'http://localhost:3000',
-		methods: ['GET', 'POST'],
-		allowedHeaders: ['my-custom-header'],
-		credentials: true
-	}
+    cors: {
+        origin: ["http://localhost:3000", "https://alexkkm.github.io"],
+        methods: ['GET', 'POST'],
+        allowedHeaders: ['my-custom-header'],
+        credentials: true
+    }
 });
 
 const PORT = process.env.PORT || 3001;
