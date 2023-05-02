@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/CSCI3280Project/static/css/main.712ac67c.css",
-    "main.js": "/CSCI3280Project/static/js/main.cccaf39a.js",
-    "index.html": "/CSCI3280Project/index.html",
-    "main.712ac67c.css.map": "/CSCI3280Project/static/css/main.712ac67c.css.map",
-    "main.cccaf39a.js.map": "/CSCI3280Project/static/js/main.cccaf39a.js.map"
+    "main.css": "/your-repo-name/static/css/main.712ac67c.css",
+    "main.js": "/your-repo-name/static/js/main.b9e7773a.js",
+    "index.html": "/your-repo-name/index.html",
+    "main.712ac67c.css.map": "/your-repo-name/static/css/main.712ac67c.css.map",
+    "main.b9e7773a.js.map": "/your-repo-name/static/js/main.b9e7773a.js.map"
   },
   "entrypoints": [
     "static/css/main.712ac67c.css",
-    "static/js/main.cccaf39a.js"
+    "static/js/main.b9e7773a.js"
   ]
 }
