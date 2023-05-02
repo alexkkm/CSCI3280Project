@@ -67,12 +67,3 @@ Your default browser should be opened and the a webpage should be displayed afte
 ### **Terminate**
 please press `ctrl + c` in your terminal and close your web browser.
 
-
-### gh-page
-"homepage": "https://alexkkm.github.io/CSCI3280Project"
-
-### Deploy with comment message:
-yarn run deploy -- -m "Deploy React app to GitHub Pages"
-
-## Deploy without message:
-yarn run deploy

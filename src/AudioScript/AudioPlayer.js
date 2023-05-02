@@ -1,11 +1,9 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { DecodeWav } from './WavDecoder';
 import MusicVisualizer from './MusicVisualizer';
 import LrcDisplayer from './LrcDisplayer';
 import musicList from '../MusicDatabase/musicList';
-import io from 'socket.io-client';
 import "../index.css"
-
 
 export default function AudioPlayer() {
 
@@ -31,7 +29,6 @@ export default function AudioPlayer() {
     const [duration, setDuration] = useState(0); // for progress bar
     const [currentMusic, setCurrentMusic] = useState(null); // for database and lyric
     const [playMode, setPlayMode] = useState('single'); // for play mode, single, loop, random
-    const [combinedResults, setCombinedResults] = useState([]);
 
     const [title, setTitle] = useState('unknown'); // for title
     const handleTitleChange = (event) => {setTitle(event.target.value);};
@@ -122,14 +119,17 @@ export default function AudioPlayer() {
     },[forceUpdate]);
 
 
-    const loadMusic = async (audioTitle, ipAddress = null) => {
+    // Load music from database
+    const loadMusic = async (audioTitle) => {
         // Find the object in the JSON data that contains the audioTitle
         const audioObj = musicList.find(obj => obj.audioTitle === audioTitle);
         if (!audioObj) {
-          alert(`Audio file not found for title: ${audioTitle}`);
-          return;
+            alert(`Audio file not found for title: ${audioTitle}`);
+            return;
         }
-      
+
+        // Create a new File object from the audio path in the object
+        const file = new File([await fetch(audioObj.audioPath).then(response => response.blob())], audioObj.audioPath);
         setCurrentMusic(audioObj);
         handleStopClick();
         setFileName(file.name);
@@ -147,7 +147,7 @@ export default function AudioPlayer() {
                 break;
             default:
                 setMusicFormat(format.toLowerCase());
-                const response = await fetch(audioObj.audioPath);
+                const response = await fetch(URL.createObjectURL(file));
                 const arrayBuffer = await response.arrayBuffer();
                 const decodedAudioData = await newAudioContext.decodeAudioData(arrayBuffer);
                 setAudioData(decodedAudioData);
@@ -160,6 +160,8 @@ export default function AudioPlayer() {
         }
         newAudioContext.close();
     };
+
+
 
     const handleFileChange = async (event) => {
         const file = event.target.files[0];
@@ -178,9 +180,6 @@ export default function AudioPlayer() {
         const fpath = URL.createObjectURL(file);
         setMusicFile(fpath);
     };
-
-    
-    
 
     // Play Music
     const handlePlayClick = () => {
@@ -459,49 +458,7 @@ export default function AudioPlayer() {
         return () => audioSource.removeEventListener('ended', handleEnd);
     }, [audioContext, audioData, audioSource, currentMusic, musicFormat, playMode, volumeLevel]);
 
-    const mergeLocalAndNetworkResults = (networkResults) => {
-        const mergedResults = [...musicList];
-        networkResults.forEach((networkResult) => {
-            const duplicateIndex = mergedResults.findIndex(
-                (localResult) => localResult.audioTitle === networkResult.audioTitle
-            );
-            if (duplicateIndex === -1) {
-                mergedResults.push(networkResult);
-            }
-        });
-        return mergedResults;
-    };
 
-    // Socket connection and event listeners
-    useEffect(() => {
-        const socket = io('http://localhost:3001');
-
-        socket.on('connect', () => {
-            console.log('Connected to the server');
-        });
-
-        socket.on('search-result', (searchResult, ipAddress) => {
-            const combinedResults = mergeLocalAndNetworkResults(searchResult);
-            searchResult.forEach((item) => {
-                item.ipAddress = ipAddress;
-            });
-            setCombinedResults(combinedResults);
-        });
-
-        socket.on('new-music-added', (newMusic) => {
-            setCombinedResults((prevResults) => [...prevResults, newMusic]);
-        });        
-
-        return () => {
-            socketRef.current.disconnect();
-            console.log('Disconnected from the server');
-        };
-    }, []);
-
-    // Initialize the combinedResults with the local musicList
-    useEffect(() => {
-        setCombinedResults(musicList);
-    }, []);
 
     return (
         <div id="audioPlayer">
