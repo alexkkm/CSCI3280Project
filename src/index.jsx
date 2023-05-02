@@ -11,7 +11,7 @@ export default function App() {
   return (
     // React Router
     <div id="mainApp">
-    <AudioPlayer/>
+      <AudioPlayer/>
     </div>
   );
 }
