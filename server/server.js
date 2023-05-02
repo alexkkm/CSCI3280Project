@@ -32,6 +32,11 @@ io.on('connection', (socket) => {
 		  console.error('Failed to fetch IP address:', error);
 		}
 	  })();
+
+	// Get the IP address of the connected client
+	const ipAddress = socket.handshake.address;
+	console.log('Connected client IP address:', ipAddress);
+  
   
 	// Custom event for broadcasting the IP address of a connected peer
 	socket.on('broadcast-ip', (ip) => {
