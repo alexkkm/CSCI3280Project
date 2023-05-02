@@ -40,7 +40,8 @@ export default function AudioPlayer() {
     const [sliderValue, setSliderValue] = useState(0); // for progress bar
     const [isLoading, setIsLoading] = useState(false); // for loading
     const [isDraggingProgressBar, setIsDraggingProgressBar] = useState(false); // for progress bar
-
+    const [Keyword, setKeyword] = useState('');
+    const handleKeywordChange = (event) => {setKeyword(event.target.value);};
     const [title, setTitle] = useState('unknown'); // for title
     const handleTitleChange = (event) => {setTitle(event.target.value);};
     const [artist, setArtist] = useState('unknown'); // for artist
@@ -568,9 +569,14 @@ export default function AudioPlayer() {
                 <div className="row flex-grow-1">
                     {/* Upper bottom: Song list and uploding. */}
                     <div className="col-md-12" id='upperBottom'>
-                        
-                        {musicList.map((music, index) => {
-                                return (
+                        <h3>
+                            Search
+                        </h3>
+                        <input type= "text" placeholder="Keyword..." style={{color: "black", width: "200px"}} onChange = {handleKeywordChange}></input>
+                        <div style={{minHeight: "200px", maxHeight: "400px", maxWidth: "1000px", overflow: "auto"}}>
+                            {musicList.map((music, index) => {
+                                if (music.audioTitle.toLowerCase().includes(Keyword.toLowerCase()) ||music.artist.toLowerCase().includes(Keyword.toLowerCase()) || music.album.toLowerCase().includes(Keyword.toLowerCase())) {
+                                  return (
                                     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gridGap: 20, color: "white" }}>
                                         <div>
                                             <button style={{background: "lightgreen"}} onClick={() => { loadAndPlayMusic(music.audioTitle) }}>play</button>
@@ -580,8 +586,12 @@ export default function AudioPlayer() {
                                         <div>{music.artist}</div>
                                         <div>{music.album}</div>
                                     </div>
-                                );
+                                );  
+                                }
+                                
                             })}
+                        </div>
+                        
                         <div id="selectMusic" style={{marginTop: "20px"}}>
                             <h3>
                                 Add music from your computer 
