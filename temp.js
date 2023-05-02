@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { DecodeWav } from './WavDecoder';
 import MusicVisualizer from './MusicVisualizer';
 import LrcDisplayer from './LrcDisplayer';
@@ -32,8 +32,9 @@ export default function AudioPlayer() {
     const [currentMusic, setCurrentMusic] = useState(null); // for database and lyric
     const [playMode, setPlayMode] = useState('single'); // for play mode, single, loop, random
     const [combinedResults, setCombinedResults] = useState([]);
+    const [socket, setSocket] = useState(null);
 
-    const socketRef = useRef(null);
+
 
     const loadMusic = async (audioTitle, ipAddress = null) => {
         // Find the object in the JSON data that contains the audioTitle
@@ -98,83 +99,63 @@ export default function AudioPlayer() {
     };
 
     const handleFileChange = async (event) => {
-        setCurrentMusic(null);
-        handleStopClick();
-        var file = event.target.files[0];
-        if (file) {
-            setFileName(file.name);
-            const format = file.name.substr(file.name.length - 3);
-            setAudioData(null);
-            const newAudioContext = new AudioContext();
-            let decodedData;
-            let decodedAudioData;
-            switch (format.toLowerCase()) {
-                case 'wav':
-                    setMusicFormat('wav');
-                    decodedData = await DecodeWav(file);
-                    setAudioData(decodedData);
-                    setAudioBuffer(newAudioContext.createBuffer(decodedData.numChannels, decodedData.audioData.length / decodedData.numChannels, decodedData.sampleRate))
-                    setDuration(decodedData.duration);
-                    break;
-                case 'mp3':
-                case 'aac':
-                case 'ogg':
-                    setMusicFormat(format.toLowerCase());
-                    const response = await fetch(URL.createObjectURL(event.target.files[0]));
-                    const arrayBuffer = await response.arrayBuffer();
-                    decodedAudioData = await newAudioContext.decodeAudioData(arrayBuffer);
-                    setAudioData(decodedAudioData);
-                    setAudioBuffer(decodedAudioData);
-                    setDuration(decodedAudioData.duration);
-                    break;
-                default:
-                    alert('Unsupported file format, we only support wav, mp3, aac, ogg');
-                    setAudioData(null);
-                    setAudioSource(null);
-                    setAudioContext(null);
-                    setMusicFormat(null);
-                    return;
-            }
-            if (audioSource !== null) {
-                audioSource.stop();
-            }
-            newAudioContext.close();
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const response = await fetch('https://alexkkm.github.io/upload', {
-                method: 'POST',
-                body: formData,
-            });
-
-
-            if (response.ok) {
-                console.log('File uploaded and stored on the server.');
-            } else {
-                console.log('Failed to upload the file to the server.');
-            }
-
-            // Add the new music to the combinedResults and emit the 'new-music-added' event
-            const audioTitle = file.name;
-            const newMusic = {
-                audioTitle: audioTitle,
-                audioPath: URL.createObjectURL(file),
-                timeLength: numberToTime(decodedData ? decodedData.duration : decodedAudioData.duration),
-            };
-            setCombinedResults((prevResults) => [...prevResults, newMusic]);
-
-            // Send the file to the server
-            if (socketRef.current) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                  socketRef.current.emit('upload-file', e.target.result, newMusic);
-                };
-                reader.readAsArrayBuffer(file);
-            }
-
+    setCurrentMusic(null);
+    handleStopClick();
+    var file = event.target.files[0];
+    if (file) {
+        setFileName(file.name);
+        const format = file.name.substr(file.name.length - 3);
+        setAudioData(null);
+        const newAudioContext = new AudioContext();
+        let decodedData;
+        let decodedAudioData;
+        switch (format.toLowerCase()) {
+            case 'wav':
+                setMusicFormat('wav');
+                decodedData = await DecodeWav(file);
+                setAudioData(decodedData);
+                setAudioBuffer(newAudioContext.createBuffer(decodedData.numChannels, decodedData.audioData.length / decodedData.numChannels, decodedData.sampleRate))
+                setDuration(decodedData.duration);
+                break;
+            case 'mp3':
+            case 'aac':
+            case 'ogg':
+                setMusicFormat(format.toLowerCase());
+                const response = await fetch(URL.createObjectURL(event.target.files[0]));
+                const arrayBuffer = await response.arrayBuffer();
+                decodedAudioData = await newAudioContext.decodeAudioData(arrayBuffer);
+                setAudioData(decodedAudioData);
+                setAudioBuffer(decodedAudioData);
+                setDuration(decodedAudioData.duration);
+                break;
+            default:
+                alert('Unsupported file format, we only support wav, mp3, aac, ogg');
+                setAudioData(null);
+                setAudioSource(null);
+                setAudioContext(null);
+                setMusicFormat(null);
+                return;
         }
-    };
+        if (audioSource !== null) {
+            audioSource.stop();
+        }
+        newAudioContext.close();
+
+        // Add the new music to the combinedResults and emit the 'new-music-added' event
+        const audioTitle = file.name;
+        const newMusic = {
+            audioTitle: audioTitle,
+            audioPath: URL.createObjectURL(file),
+            timeLength: numberToTime(decodedData ? decodedData.duration : decodedAudioData.duration),
+        };
+        setCombinedResults((prevResults) => [...prevResults, newMusic]);
+
+        // Get the socket reference
+        if (socket) {
+            socket.emit('new-music-added', newMusic);
+        }
+    }
+};
 
     
     
@@ -479,31 +460,29 @@ export default function AudioPlayer() {
         return mergedResults;
     };
 
-    // Socket connection and event listeners
     useEffect(() => {
-        const socket = io('http://localhost:3001');
-
-        socket.on('connect', () => {
+        const socketConnection = io('http://localhost:3001');
+    
+        socketConnection.on('connect', () => {
             console.log('Connected to the server');
         });
-
-        socket.on('search-result', (searchResult, ipAddress) => {
+    
+        socketConnection.on('search-result', (searchResult, ipAddress) => {
             const combinedResults = mergeLocalAndNetworkResults(searchResult);
             searchResult.forEach((item) => {
                 item.ipAddress = ipAddress;
             });
             setCombinedResults(combinedResults);
         });
-
-        socket.on('new-music-added', (newMusic) => {
-            setCombinedResults((prevResults) => [...prevResults, newMusic]);
-        });        
-
+    
+        setSocket(socketConnection);
+    
         return () => {
-            socketRef.current.disconnect();
+            socketConnection.disconnect();
             console.log('Disconnected from the server');
         };
     }, []);
+    
 
     // Initialize the combinedResults with the local musicList
     useEffect(() => {

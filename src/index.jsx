@@ -33,10 +33,6 @@ export default function App() {
 		socket.on('peer-ip', (ip) => {
 			console.log('Received peer IP:', ip);
 		});
-
-		// Send the current client's IP address to the server
-		const ipAddress = 'YOUR_CLIENT_IP_ADDRESS'; // Replace this with the actual IP address
-		socket.emit('broadcast-ip', ipAddress);
 	}, []);
 
 	return (
