@@ -39,6 +39,7 @@ export default function AudioPlayer() {
     const [playMode, setPlayMode] = useState('single'); // for play mode, single, loop, random
     const [sliderValue, setSliderValue] = useState(0); // for progress bar
     const [isLoading, setIsLoading] = useState(false); // for loading
+    const [isDraggingProgressBar, setIsDraggingProgressBar] = useState(false); // for progress bar
 
     const [title, setTitle] = useState('unknown'); // for title
     const handleTitleChange = (event) => {setTitle(event.target.value);};
@@ -287,31 +288,42 @@ export default function AudioPlayer() {
         }
     };
 
+    const onProgressBarDragging = (e, v) => {
+        if (e.buttons !== 0){
+            setIsDraggingProgressBar(true);
+            setSliderValue(v);
+        }
+    }
+
     // Progress Bar
     const [offset, setOffset] = useState(0);
     const setProgressBar = (e, v) => {
         if (audioSource === null) return;
         if (isLoading === true) return;
-        setIsLoading(true);
+
+         
+        setIsDraggingProgressBar(false);
 
         let targetTime = v;
         setOffset(targetTime);
 
+        setIsLoading(true);
+
         if (audioSource !== null) {
             audioSource.stop();
+            audioSource.disconnect();
             setAudioSource(null);
         }
 
         let newAudioContext;
-        if (audioContext !== null && audioContext.state !== 'closed' && isLoading === false) {
+        if (audioContext !== null && audioContext.state !== 'closed') {
             audioContext.close();
             setAudioContext(null);
             newAudioContext = new AudioContext();
         }
-        else newAudioContext = audioContext;
-        if (audioContext.state === 'closed') {
-            setAudioContext(null);
-            newAudioContext = new AudioContext();
+        else {
+
+            newAudioContext = audioContext;
         }
         // set analyser
         const analyser = newAudioContext.createAnalyser();
@@ -359,10 +371,13 @@ export default function AudioPlayer() {
 
     useEffect(() => {
         if (isPlayingMusic) {
+            if (isDraggingProgressBar) {
+                return;
+            }
             const interval = setInterval(updateProgressBar, 100);
             return () => clearInterval(interval);
         }
-    }, [isPlayingMusic, updateProgressBar]);
+    }, [isPlayingMusic, updateProgressBar, isDraggingProgressBar]);
 
     // Load and Play
     const loadAndPlayMusic = async (audioTitle) => {
@@ -662,7 +677,7 @@ export default function AudioPlayer() {
                             max={audioData ? audioData.duration : 0}
                             value={sliderValue}
                             step={0.01}
-                            onChange={setProgressBar}
+                            onChangeCommitted={setProgressBar}
                             sx={{
                                 width: "85%",
                                 color:"#eda9ee" // light_purple
