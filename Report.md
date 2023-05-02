@@ -14,6 +14,8 @@
 
 Github repository: https://github.com/alexkkm/CSCI3280Project
 
+Github Page: "https://alexkkm.github.io/CSCI3280Project",
+
 This project aims to create a music player with a web interface using React library. React is a popular front-end library that provides the ability to create complex user interfaces using components. This project leverages the advantages of React, such as the ability to create reusable components, fast rendering, and easy debugging.
 
 Currently, the project includes the following features:

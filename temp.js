@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { DecodeWav } from './WavDecoder';
 import MusicVisualizer from './MusicVisualizer';
 import LrcDisplayer from './LrcDisplayer';
@@ -32,94 +32,8 @@ export default function AudioPlayer() {
     const [currentMusic, setCurrentMusic] = useState(null); // for database and lyric
     const [playMode, setPlayMode] = useState('single'); // for play mode, single, loop, random
     const [combinedResults, setCombinedResults] = useState([]);
+    const [socket, setSocket] = useState(null);
 
-    const [title, setTitle] = useState('unknown'); // for title
-    const handleTitleChange = (event) => {setTitle(event.target.value);};
-    const [artist, setArtist] = useState('unknown'); // for artist
-    const handleArtistChange = (event) => {setArtist(event.target.value);};
-    const [album, setAlbum] = useState('unknown'); // for album
-    const handleAlbumChange = (event) => {setAlbum(event.target.value);};
-    const [coverFile, setCoverFile] = useState(null); // for cover
-    const handleCoverFileChange = (event) => {
-        const file = event.target.files[0];
-        const format = file.name.substr(file.name.length - 3);
-        if (format !== 'jpg' && format !== 'JPG' && format !== 'png' && format !== 'PNG') {
-            if (file.name.substr(file.name.length - 4) !== 'jpeg' && file.name.substr(file.name.length - 4) !== 'JPEG') {
-                alert('Please upload a jpg or png file');
-                return;
-            }
-        }
-        const fpath = URL.createObjectURL(file);
-        setCoverFile(fpath);
-    };
-    const [lyricsFile, setLyricsFile] = useState(null); // for lyrics
-    const handleLyricsFileChange = (event) => {
-        const file = event.target.files[0];
-        const format = file.name.substr(file.name.length - 3);
-        if (format !== 'txt' && format !== 'lrc') {
-            alert('Please upload a txt or lrc file');
-            return;
-        }
-        var fpath = URL.createObjectURL(file);
-
-        fpath = fpath.concat("."+format);
-
-        setLyricsFile(fpath);
-    };
-    const [musicFile, setMusicFile] = useState(null); // for music file
-    const handleMusicFileChange = (event) => {
-        const file = event.target.files[0];
-        const format = file.name.substr(file.name.length - 3);
-        if (format !== 'wav' && format !== 'mp3' && format !== 'ogg' && 'aac') {
-            alert('Please upload a wav, mp3, ogg or aac file');
-            return;
-        }
-        const fpath = URL.createObjectURL(file);
-        setMusicFile(fpath);
-    };
-    
-
-    const [, updateState] = React.useState();
-    const forceUpdate = React.useCallback(() => updateState({}), []); // force rerender
-
-    // Add music to database
-    const addMusic = useCallback (() => {
-
-        if (musicFile === null) { alert ("please upload a music"); return; }
-
-        if (title === null) { setTitle('unknown'); }
-        if (artist === null) { setArtist('unknown'); }
-        if (album === null) { setAlbum('unknown'); }
-        if (coverFile === null) { setCoverFile(''); }
-        if (lyricsFile === null) { setLyricsFile(''); }
-        if (musicFile === null) { setMusicFile(''); }
-    
-        musicList.push(
-            {
-                "audioPath": musicFile,
-                "audioTitle": title,
-                "artist": artist,
-                "album": album,
-                "coverPhotoPath": coverFile,
-                "lyricsPath": lyricsFile
-            }
-        );
-
-        forceUpdate();
-
-        setTitle('unknown');
-        setArtist('unknown');
-        setAlbum('unknown');
-        setCoverFile(null);
-        setLyricsFile(null);
-        setMusicFile(null);
-    },[forceUpdate, title, artist, album, coverFile, lyricsFile, musicFile]);
-
-    // delete music from database
-    const deleteMusic = useCallback ((name) => {
-        musicList.splice(musicList.findIndex(obj => obj.audioTitle === name), 1);
-        forceUpdate();
-    },[forceUpdate]);
 
 
     const loadMusic = async (audioTitle, ipAddress = null) => {
@@ -132,20 +46,18 @@ export default function AudioPlayer() {
       
         setCurrentMusic(audioObj);
         handleStopClick();
-        setFileName(file.name);
-        const format = file.name.substr(file.name.length - 3);
-        setAudioData(null);
-        // setAudioURL(URL.createObjectURL(file));
-        const newAudioContext = new AudioContext();
-        switch (format.toLowerCase()) {
-            case 'wav':
-                setMusicFormat('wav');
-                const decodedData = await DecodeWav(file);
-                setAudioData(decodedData);
-                setAudioBuffer(newAudioContext.createBuffer(decodedData.numChannels, decodedData.audioData.length / decodedData.numChannels, decodedData.sampleRate))
-                setDuration(decodedData.duration);
-                break;
-            default:
+        setFileName(audioObj.audioTitle);
+      
+        if (!ipAddress) {
+            // Local file
+            const format = audioObj.audioPath.substr(audioObj.audioPath.length - 3);
+            setAudioData(null);
+            const newAudioContext = new AudioContext();
+            switch (format.toLowerCase()) {
+                case 'wav':
+                case 'mp3':
+                case 'aac':
+                case 'ogg':
                 setMusicFormat(format.toLowerCase());
                 const response = await fetch(audioObj.audioPath);
                 const arrayBuffer = await response.arrayBuffer();
@@ -154,30 +66,96 @@ export default function AudioPlayer() {
                 setAudioBuffer(decodedAudioData);
                 setDuration(decodedAudioData.duration);
                 break;
+                default:
+                alert('Unsupported file format, we only support wav, mp3, aac, ogg');
+                setAudioData(null);
+                setAudioSource(null);
+                setAudioContext(null);
+                setMusicFormat(null);
+                return;
+            }
+            if (audioSource !== null) {
+                audioSource.stop();
+            }
+            newAudioContext.close();
+        } else {
+            // Stream from another computer
+            const url = `http://${ipAddress}:3001/stream/${audioObj.audioPath.split('/').pop()}`;
+            const mediaSource = new MediaSource();
+            const audioElement = new Audio();
+            audioElement.src = URL.createObjectURL(mediaSource);
+            audioElement.crossOrigin = 'anonymous';
+            audioElement.preload = 'auto';
+        
+            mediaSource.addEventListener('sourceopen', async () => {
+                const sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg');
+                const response = await fetch(url);
+                const data = await response.arrayBuffer();
+                sourceBuffer.appendBuffer(data);
+            });
+        
+            audioElement.play();
+        }
+    };
+
+    const handleFileChange = async (event) => {
+    setCurrentMusic(null);
+    handleStopClick();
+    var file = event.target.files[0];
+    if (file) {
+        setFileName(file.name);
+        const format = file.name.substr(file.name.length - 3);
+        setAudioData(null);
+        const newAudioContext = new AudioContext();
+        let decodedData;
+        let decodedAudioData;
+        switch (format.toLowerCase()) {
+            case 'wav':
+                setMusicFormat('wav');
+                decodedData = await DecodeWav(file);
+                setAudioData(decodedData);
+                setAudioBuffer(newAudioContext.createBuffer(decodedData.numChannels, decodedData.audioData.length / decodedData.numChannels, decodedData.sampleRate))
+                setDuration(decodedData.duration);
+                break;
+            case 'mp3':
+            case 'aac':
+            case 'ogg':
+                setMusicFormat(format.toLowerCase());
+                const response = await fetch(URL.createObjectURL(event.target.files[0]));
+                const arrayBuffer = await response.arrayBuffer();
+                decodedAudioData = await newAudioContext.decodeAudioData(arrayBuffer);
+                setAudioData(decodedAudioData);
+                setAudioBuffer(decodedAudioData);
+                setDuration(decodedAudioData.duration);
+                break;
+            default:
+                alert('Unsupported file format, we only support wav, mp3, aac, ogg');
+                setAudioData(null);
+                setAudioSource(null);
+                setAudioContext(null);
+                setMusicFormat(null);
+                return;
         }
         if (audioSource !== null) {
             audioSource.stop();
         }
         newAudioContext.close();
-    };
 
-    const handleFileChange = async (event) => {
-        const file = event.target.files[0];
-        const format = file.name.substr(file.name.length - 3);
-        if (format !== 'wav' && format !== 'mp3' && format !== 'ogg' && 'aac') {
-            alert('Please upload a wav, mp3, ogg or aac file');
-            return;
+        // Add the new music to the combinedResults and emit the 'new-music-added' event
+        const audioTitle = file.name;
+        const newMusic = {
+            audioTitle: audioTitle,
+            audioPath: URL.createObjectURL(file),
+            timeLength: numberToTime(decodedData ? decodedData.duration : decodedAudioData.duration),
+        };
+        setCombinedResults((prevResults) => [...prevResults, newMusic]);
+
+        // Get the socket reference
+        if (socket) {
+            socket.emit('new-music-added', newMusic);
         }
-        var isMusicExist = false;
-        musicList.map((music) => {
-            if (music.audioTitle === file.name.substr(0, file.name.length-4)) {
-                isMusicExist = true;
-                alert('This music is already in the database');
-            }
-        })
-        const fpath = URL.createObjectURL(file);
-        setMusicFile(fpath);
-    };
+    }
+};
 
     
     
@@ -261,7 +239,7 @@ export default function AudioPlayer() {
         setVolumeLevel(parseFloat(event.target.value));
         if (audioSource !== null) {
             const gainNode = audioContext.createGain();
-            // console.log('volumeLevel: ', volumeLevel);
+            console.log('volumeLevel: ', volumeLevel);
             gainNode.gain.value = volumeLevel;
             gainNode.connect(analyser);
             audioSource.disconnect();
@@ -339,101 +317,111 @@ export default function AudioPlayer() {
         }
     }, [isPlayingMusic, updateProgressBar]);
 
-    // Load and Play
-    const loadAndPlayMusic = async (audioTitle) => {
-
-        // Find the object in the JSON data that contains the audioTitle
-        const audioObj = musicList.find(obj => obj.audioTitle === audioTitle);
-        if (!audioObj) {
-            alert(`Audio file not found for title: ${audioTitle}`);
-            return;
-        }
-
-        // Create a new File object from the audio path in the object
-        const file = new File([await fetch(audioObj.audioPath).then(response => response.blob())], audioObj.audioPath);
-        setCurrentMusic(audioObj);
-        if (audioSource !== null) {
-            audioSource.stop();
-            setAudioSource(null);
-        }
-        if (audioContext !== null) {
-            audioContext.close();
-            setAudioContext(null);
-        }
-        setOffset(0);
-        document.getElementById('progressBar').value = 0;
-        setCurrentTime(0);
-        setFileName(file.name);
-        const format = file.name.substr(file.name.length - 3);
-        let decodedAudioData;
-        let decodedAudioBuffer;
-        setAudioData(null);
-        // setAudioURL(URL.createObjectURL(file));
-        const new2AudioContext = new AudioContext();
-        switch (format.toLowerCase()) {
-            case 'wav':
-                setMusicFormat('wav');
-                decodedAudioData = await DecodeWav(file);
-                setAudioData(decodedAudioData);
-                decodedAudioBuffer = (new2AudioContext.createBuffer(decodedAudioData.numChannels, decodedAudioData.audioData.length / decodedAudioData.numChannels, decodedAudioData.sampleRate))
-                setAudioBuffer(decodedAudioBuffer);
-                setDuration(decodedAudioData.duration);
-                break;
-            default:
-                setMusicFormat(format.toLowerCase());
-                const response = await fetch(URL.createObjectURL(file));
-                const arrayBuffer = await response.arrayBuffer();
-                decodedAudioData = await new2AudioContext.decodeAudioData(arrayBuffer);
-                setAudioData(decodedAudioData);
-                decodedAudioBuffer = (decodedAudioData);
-                setAudioBuffer(decodedAudioBuffer);
-                setDuration(decodedAudioData.duration);
-                break;
-        }
-        if (audioSource !== null) {
-            audioSource.stop();
-        }
-        new2AudioContext.close();
-
-        setIsPlayingMusic(true);
-
-        // play a new audio
-        setCurrentTime(0);
-        setOffset(0);
-        let new3AudioContext;
-        if (audioContext === null || audioContext.state === "closed") new3AudioContext = new AudioContext();
-        else new3AudioContext = audioContext;
-
-        // set analyser
-        const analyser = new3AudioContext.createAnalyser();
-        analyser.fftSize = 256;
-        analyser.connect(new3AudioContext.destination);
-        setAnalyser(analyser);
-
-        // set volume
-        const gainNode = new3AudioContext.createGain();
-        gainNode.gain.value = volumeLevel;
-        gainNode.connect(analyser);
-
-        if (musicFormat === 'wav') {
-            for (let channel = 0; channel < decodedAudioData.numChannels; channel++) {
-                const channelData = decodedAudioBuffer.getChannelData(channel);
-                for (let i = 0; i < decodedAudioData.decodedAudioData.length; i += decodedAudioData.numChannels) {
-                    channelData[i / decodedAudioData.numChannels] = decodedAudioData.decodedAudioData[i + channel];
-                }
-            }
-        }
-        const sourceNode = new3AudioContext.createBufferSource();
-        sourceNode.buffer = decodedAudioBuffer;
-        sourceNode.connect(gainNode);
-        sourceNode.start();
-        setAudioSource(sourceNode);
-        setAudioContext(new3AudioContext);
-    };
 
     // handle PlayMode
     useEffect(() => {
         if (audioContext === null) return;
+
+        const loadAndPlayMusic = async (audioTitle) => {
+
+            // Find the object in the JSON data that contains the audioTitle
+            const audioObj = musicList.find(obj => obj.audioTitle === audioTitle);
+            if (!audioObj) {
+                alert(`Audio file not found for title: ${audioTitle}`);
+                return;
+            }
+
+            // Create a new File object from the audio path in the object
+            const file = new File([await fetch(audioObj.audioPath).then(response => response.blob())], audioObj.audioPath);
+            setCurrentMusic(audioObj);
+            if (audioSource !== null) {
+                audioSource.stop();
+                setAudioSource(null);
+            }
+            if (audioContext !== null) {
+                audioContext.close();
+                setAudioContext(null);
+            }
+            setOffset(0);
+            document.getElementById('progressBar').value = 0;
+            setCurrentTime(0);
+            setFileName(file.name);
+            const format = file.name.substr(file.name.length - 3);
+            let decodedAudioData;
+            let decodedAudioBuffer;
+            setAudioData(null);
+            // setAudioURL(URL.createObjectURL(file));
+            const new2AudioContext = new AudioContext();
+            switch (format.toLowerCase()) {
+                case 'wav':
+                    setMusicFormat('wav');
+                    decodedAudioData = await DecodeWav(file);
+                    setAudioData(decodedAudioData);
+                    decodedAudioBuffer = (new2AudioContext.createBuffer(decodedAudioData.numChannels, decodedAudioData.audioData.length / decodedAudioData.numChannels, decodedAudioData.sampleRate))
+                    setAudioBuffer(decodedAudioBuffer);
+                    setDuration(decodedAudioData.duration);
+                    break;
+                case 'mp3':
+                case 'aac':
+                case 'ogg':
+                    setMusicFormat(format.toLowerCase());
+                    const response = await fetch(URL.createObjectURL(file));
+                    const arrayBuffer = await response.arrayBuffer();
+                    decodedAudioData = await new2AudioContext.decodeAudioData(arrayBuffer);
+                    setAudioData(decodedAudioData);
+                    decodedAudioBuffer = (decodedAudioData);
+                    setAudioBuffer(decodedAudioBuffer);
+                    setDuration(decodedAudioData.duration);
+                    break;
+                default:
+                    alert('Unsupported file format, we only support wav, mp3, aac, ogg');
+                    setAudioData(null);
+                    setAudioSource(null);
+                    setAudioContext(null);
+                    setMusicFormat(null);
+                    return;
+            }
+            if (audioSource !== null) {
+                audioSource.stop();
+            }
+            new2AudioContext.close();
+
+            setIsPlayingMusic(true);
+
+            // play a new audio
+            setCurrentTime(0);
+            setOffset(0);
+            let new3AudioContext;
+            if (audioContext === null || audioContext.state === "closed") new3AudioContext = new AudioContext();
+            else new3AudioContext = audioContext;
+
+            // set analyser
+            const analyser = new3AudioContext.createAnalyser();
+            analyser.fftSize = 256;
+            analyser.connect(new3AudioContext.destination);
+            setAnalyser(analyser);
+
+            // set volume
+            const gainNode = new3AudioContext.createGain();
+            gainNode.gain.value = volumeLevel;
+            gainNode.connect(analyser);
+
+            if (musicFormat === 'wav') {
+                for (let channel = 0; channel < decodedAudioData.numChannels; channel++) {
+                    const channelData = decodedAudioBuffer.getChannelData(channel);
+                    for (let i = 0; i < decodedAudioData.decodedAudioData.length; i += decodedAudioData.numChannels) {
+                        channelData[i / decodedAudioData.numChannels] = decodedAudioData.decodedAudioData[i + channel];
+                    }
+                }
+            }
+            const sourceNode = new3AudioContext.createBufferSource();
+            sourceNode.buffer = decodedAudioBuffer;
+            sourceNode.connect(gainNode);
+            sourceNode.start();
+            setAudioSource(sourceNode);
+            setAudioContext(new3AudioContext);
+        };
+
         const handleEnd = () => {
             setIsPlayingMusic(false);
             setCurrentTime(0);
@@ -472,31 +460,29 @@ export default function AudioPlayer() {
         return mergedResults;
     };
 
-    // Socket connection and event listeners
     useEffect(() => {
-        const socket = io('http://localhost:3001');
-
-        socket.on('connect', () => {
+        const socketConnection = io('http://localhost:3001');
+    
+        socketConnection.on('connect', () => {
             console.log('Connected to the server');
         });
-
-        socket.on('search-result', (searchResult, ipAddress) => {
+    
+        socketConnection.on('search-result', (searchResult, ipAddress) => {
             const combinedResults = mergeLocalAndNetworkResults(searchResult);
             searchResult.forEach((item) => {
                 item.ipAddress = ipAddress;
             });
             setCombinedResults(combinedResults);
         });
-
-        socket.on('new-music-added', (newMusic) => {
-            setCombinedResults((prevResults) => [...prevResults, newMusic]);
-        });        
-
+    
+        setSocket(socketConnection);
+    
         return () => {
-            socketRef.current.disconnect();
+            socketConnection.disconnect();
             console.log('Disconnected from the server');
         };
     }, []);
+    
 
     // Initialize the combinedResults with the local musicList
     useEffect(() => {
@@ -530,54 +516,59 @@ export default function AudioPlayer() {
                 <div className="row flex-grow-1">
                     {/* Upper bottom: Song list and uploding. */}
                     <div className="col-md-12" id='upperBottom'>
-                        
-                        {musicList.map((music, index) => {
+                        <div id="songList">
+                            <h3>Song List:</h3>
+                            {
+                                // Adding the song list content here
+                            }
+                            <table>
+                                <thead>
+                                    <tr>
+                                    <th><h3>Title</h3></th>
+                                    <th><h3>Time Length</h3></th>
+                                    <th><h3>Artist</h3></th>
+                                    <th><h3>Album</h3></th>
+                                    </tr>
+                                </thead>
+                            </table>
+
+                            {combinedResults.map((music, index) => {
                                 return (
-                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gridGap: 20, color: "white" }}>
-                                        <div>
-                                            <button style={{background: "lightgreen"}} onClick={() => { loadAndPlayMusic(music.audioTitle) }}>play</button>
-                                            <button style={{background: "pink"}} onClick={() => { deleteMusic(music.audioTitle) }}>delete</button>
-                                            {music.audioTitle}
-                                        </div>
-                                        <div>{music.artist}</div>
-                                        <div>{music.album}</div>
+
+                                    <div key={index}>
+                                        <table id="songListTable" >
+                                            <tr>
+                                                <th>
+                                                    <button onClick={() => { loadMusic(music.audioTitle, music.ipAddress) }}>{music.audioTitle}</button>
+                                                </th>
+                                                <th>
+                                                    <p>{music.timeLength}</p>
+                                                </th>
+                                                <th>
+                                                    <p>{music.artist}</p>
+                                                </th>
+                                                <th>
+                                                    <p>{music.album}</p>
+                                                </th>
+                                            </tr>
+                                        </table>
+
                                     </div>
                                 );
                             })}
-                        <div id="selectMusic" style={{marginTop: "20px"}}>
-                            <h3>
-                                Add music from your computer 
-                            </h3>
-                            <input type="text" placeholder="Title" style={{color:"black", width: "200px"}} onChange={handleTitleChange} />
-                            <input type="text" placeholder="Artist" style={{color:"black", width: "200px"}} onChange={handleArtistChange}/>
-                            <input type="text" placeholder="Album" style={{color:"black", width: "200px"}} onChange={handleAlbumChange}/>
-                            <div style={{display:"flex", flexDirection:"row", justifyContent:"space-between", margin:"5px"}}>
-                                <>
-                                    <p style={{margin: "4px"}}>Cover</p>
-                                    {/* <label for="coverFile" style={{background:"white", marginLeft:"5px", marginRight:"5px"}}>Select Cover</label> */}
-                                    <input id="coverFile" type="file" style={{color:"grey"}} onChange={handleCoverFileChange} />
-                                </>
-                                <>
-                                    <p style={{margin: "4px"}}>Lyrics</p>
-                                    {/* <label for="lyricsFile" style={{background:"white", marginLeft:"5px", marginRight:"5px"}}>Select Lyrics</label> */}
-                                    <input id="lyricsFile" type="file" style={{color:"grey"}} onChange={handleLyricsFileChange} />
-                                </>
-                                <>
-                                    <p style={{margin: "4px"}}>Music</p>
-                                    {/* <label for="musicFile" style={{background:"white", marginLeft:"5px", marginRight:"5px"}}>Select Music</label> */}
-                                    <input id="musicFile" type="file" style={{color:"grey"}} onChange={handleMusicFileChange} />
-                                </>
-                            </div>
-                            <button style={{background:"lightblue"}} onClick={addMusic}>Upload</button>
+
+                        </div>
+                        <div id="selectMusic">
+                            <h3>Select music from your computer <input type="file" onChange={handleFileChange} /> </h3>
                         </div>
 
                     </div>
                 </div>
-                
-                <div className="row" style={{marginTop:"20px"}}>
+
+                <div className="row">
                     {/* Bottom block: Audio information and control. */}
                     <div className="col-md-12" id='bottom'>
-                        <h2 style={{color: 'white'}}>{currentMusic === null ? fileName : currentMusic.audioTitle}</h2>
+                        <h2>{currentMusic === null ? fileName : currentMusic.audioTitle}</h2>
                         <p>Artist: {currentMusic === null ? "unknown" : currentMusic.artist}</p>
                         <p>Album: {currentMusic === null ? "unknown" : currentMusic.album}</p>
 
@@ -602,6 +593,7 @@ export default function AudioPlayer() {
                         <button id="single" onClick={() => { setPlayMode('single') }} disabled={playMode === 'single'}>Single</button>
                         <button id="loop" onClick={() => { setPlayMode('loop') }} disabled={playMode === 'loop'}>Loop</button>
                         <button id="random" onClick={() => { setPlayMode('random') }} disabled={playMode === 'random'}>Random</button>
+                        {" " + playMode}
                         <div>
                             <input
                                 type="range"
@@ -609,16 +601,13 @@ export default function AudioPlayer() {
                                 min="0"
                                 max={audioData ? audioData.duration : 0}
                                 step="0.01"
-                                style={{ width: "300px", height:"40px" }}
+                                style={{ width: "300px" }}
                                 onChange={setProgressBar}
                             >
                             </input>
-                            <p style={{color:"white"}}>{numberToTime(currentTime)} / {numberToTime(duration)}</p>
+                            {numberToTime(currentTime)} / {numberToTime(duration)}
                         </div>
                     </div>
-                </div>
-                <div style={{height:"250px"}}>
-
                 </div>
             </div>
 
@@ -628,7 +617,7 @@ export default function AudioPlayer() {
 
 
             {/* Debug: Audio data. */}
-            {/* {
+            {
                 audioData && (
                     <div>
                         <p>File Name: {fileName}</p>
@@ -641,7 +630,7 @@ export default function AudioPlayer() {
                         <p>Bit Depth: {audioData.bitDepth}</p>
                     </div>
                 )
-            } */}
+            }
         </div >
     );
 }
