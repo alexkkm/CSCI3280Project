@@ -1,0 +1,15 @@
+:root{
+  --darkest_purple: #1d031d;
+  --dark_purple: #681e69;
+  --light_purple: #eda9ee;
+  --lightest_purple: #f6d5f8;
+
+  --body_color: var(--lightest_purple);
+}
+
+#mainApp{
+  background: linear-gradient(purple, black);
+  color: var(--body_color);
+  min-height: 100vh;
+  max-height: 100%;
+}

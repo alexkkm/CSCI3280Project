@@ -1,9 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import Slider from '@mui/material/Slider';
 import { DecodeWav } from './WavDecoder';
 import MusicVisualizer from './MusicVisualizer';
 import LrcDisplayer from './LrcDisplayer';
 import musicList from '../MusicDatabase/musicList';
-import "../index.css"
+import "../Styles/AudioPlayer.css";
+
+import PlayArrowRounded from '@mui/icons-material/PlayArrowRounded';
+import PauseRounded from '@mui/icons-material/PauseRounded';
+import SkipNextRounded from '@mui/icons-material/SkipNextRounded';
+import AllInclusiveRounded from '@mui/icons-material/AllInclusiveRounded';
+import ShuffleRounded from '@mui/icons-material/ShuffleRounded';
+import LooksOneRounded from '@mui/icons-material/LooksOneRounded';
 
 export default function AudioPlayer() {
 
@@ -29,6 +37,8 @@ export default function AudioPlayer() {
     const [duration, setDuration] = useState(0); // for progress bar
     const [currentMusic, setCurrentMusic] = useState(null); // for database and lyric
     const [playMode, setPlayMode] = useState('single'); // for play mode, single, loop, random
+    const [sliderValue, setSliderValue] = useState(0); // for progress bar
+    const [isLoading, setIsLoading] = useState(false); // for loading
 
     const [title, setTitle] = useState('unknown'); // for title
     const handleTitleChange = (event) => {setTitle(event.target.value);};
@@ -37,6 +47,10 @@ export default function AudioPlayer() {
     const [album, setAlbum] = useState('unknown'); // for album
     const handleAlbumChange = (event) => {setAlbum(event.target.value);};
     const [coverFile, setCoverFile] = useState(null); // for cover
+
+    // A stack to store music played
+    var musicStack = [];
+
     const handleCoverFileChange = (event) => {
         const file = event.target.files[0];
         const format = file.name.substr(file.name.length - 3);
@@ -120,46 +134,46 @@ export default function AudioPlayer() {
 
 
     // Load music from database
-    const loadMusic = async (audioTitle) => {
-        // Find the object in the JSON data that contains the audioTitle
-        const audioObj = musicList.find(obj => obj.audioTitle === audioTitle);
-        if (!audioObj) {
-            alert(`Audio file not found for title: ${audioTitle}`);
-            return;
-        }
+    // const loadMusic = async (audioTitle) => {
+    //     // Find the object in the JSON data that contains the audioTitle
+    //     const audioObj = musicList.find(obj => obj.audioTitle === audioTitle);
+    //     if (!audioObj) {
+    //         alert(`Audio file not found for title: ${audioTitle}`);
+    //         return;
+    //     }
 
-        // Create a new File object from the audio path in the object
-        const file = new File([await fetch(audioObj.audioPath).then(response => response.blob())], audioObj.audioPath);
-        setCurrentMusic(audioObj);
-        handleStopClick();
-        setFileName(file.name);
-        const format = file.name.substr(file.name.length - 3);
-        setAudioData(null);
-        // setAudioURL(URL.createObjectURL(file));
-        const newAudioContext = new AudioContext();
-        switch (format.toLowerCase()) {
-            case 'wav':
-                setMusicFormat('wav');
-                const decodedData = await DecodeWav(file);
-                setAudioData(decodedData);
-                setAudioBuffer(newAudioContext.createBuffer(decodedData.numChannels, decodedData.audioData.length / decodedData.numChannels, decodedData.sampleRate))
-                setDuration(decodedData.duration);
-                break;
-            default:
-                setMusicFormat(format.toLowerCase());
-                const response = await fetch(URL.createObjectURL(file));
-                const arrayBuffer = await response.arrayBuffer();
-                const decodedAudioData = await newAudioContext.decodeAudioData(arrayBuffer);
-                setAudioData(decodedAudioData);
-                setAudioBuffer(decodedAudioData);
-                setDuration(decodedAudioData.duration);
-                break;
-        }
-        if (audioSource !== null) {
-            audioSource.stop();
-        }
-        newAudioContext.close();
-    };
+    //     // Create a new File object from the audio path in the object
+    //     const file = new File([await fetch(audioObj.audioPath).then(response => response.blob())], audioObj.audioPath);
+    //     setCurrentMusic(audioObj);
+    //     handleStopClick();
+    //     setFileName(file.name);
+    //     const format = file.name.substr(file.name.length - 3);
+    //     setAudioData(null);
+    //     // setAudioURL(URL.createObjectURL(file));
+    //     const newAudioContext = new AudioContext();
+    //     switch (format.toLowerCase()) {
+    //         case 'wav':
+    //             setMusicFormat('wav');
+    //             const decodedData = await DecodeWav(file);
+    //             setAudioData(decodedData);
+    //             setAudioBuffer(newAudioContext.createBuffer(decodedData.numChannels, decodedData.audioData.length / decodedData.numChannels, decodedData.sampleRate))
+    //             setDuration(decodedData.duration);
+    //             break;
+    //         default:
+    //             setMusicFormat(format.toLowerCase());
+    //             const response = await fetch(URL.createObjectURL(file));
+    //             const arrayBuffer = await response.arrayBuffer();
+    //             const decodedAudioData = await newAudioContext.decodeAudioData(arrayBuffer);
+    //             setAudioData(decodedAudioData);
+    //             setAudioBuffer(decodedAudioData);
+    //             setDuration(decodedAudioData.duration);
+    //             break;
+    //     }
+    //     if (audioSource !== null) {
+    //         audioSource.stop();
+    //     }
+    //     newAudioContext.close();
+    // };
 
 
 
@@ -184,7 +198,12 @@ export default function AudioPlayer() {
     // Play Music
     const handlePlayClick = () => {
         if (isPlayingMusic === true) return;
-        if (musicFormat === null) return;
+        if (isLoading === true) return;
+        if (musicFormat === null) {
+            const randomIndex = Math.floor(Math.random() * musicList.length);
+            const randomMusic = musicList[randomIndex];
+            loadAndPlayMusic(randomMusic.audioTitle);
+        };
 
         console.log('play');
         setIsPlayingMusic(true);
@@ -250,7 +269,7 @@ export default function AudioPlayer() {
             setAudioContext(null);
         }
         setOffset(0);
-        document.getElementById('progressBar').value = 0;
+        setSliderValue(0);
         setCurrentTime(0);
     };
 
@@ -270,10 +289,12 @@ export default function AudioPlayer() {
 
     // Progress Bar
     const [offset, setOffset] = useState(0);
-    const setProgressBar = () => {
+    const setProgressBar = (e, v) => {
         if (audioSource === null) return;
-        const progressBar = document.getElementById('progressBar');
-        let targetTime = progressBar.value;
+        if (isLoading === true) return;
+        setIsLoading(true);
+
+        let targetTime = v;
         setOffset(targetTime);
 
         if (audioSource !== null) {
@@ -282,13 +303,16 @@ export default function AudioPlayer() {
         }
 
         let newAudioContext;
-        if (audioContext !== null) {
+        if (audioContext !== null && audioContext.state !== 'closed' && isLoading === false) {
             audioContext.close();
             setAudioContext(null);
             newAudioContext = new AudioContext();
         }
         else newAudioContext = audioContext;
-
+        if (audioContext.state === 'closed') {
+            setAudioContext(null);
+            newAudioContext = new AudioContext();
+        }
         // set analyser
         const analyser = newAudioContext.createAnalyser();
         analyser.fftSize = 256;
@@ -314,6 +338,8 @@ export default function AudioPlayer() {
         setAudioSource(sourceNode);
         setAudioContext(newAudioContext);
 
+        setIsLoading(false);
+
         if (!isPlayingMusic) {
             sourceNode.context.suspend();
         }
@@ -321,25 +347,27 @@ export default function AudioPlayer() {
     }
 
     const updateProgressBar = useCallback(() => {
-        const progressBar = document.getElementById('progressBar');
         let duration = audioData ? audioData.duration : 0;
+        
         let time = audioContext.currentTime - audioSource.context.baseLatency + parseFloat(offset);
         if (time > duration) {
             time = duration;
         }
-        progressBar.value = time;
+        setSliderValue(time);
         setCurrentTime(time);
     }, [audioContext, audioData, audioSource, offset]);
 
     useEffect(() => {
         if (isPlayingMusic) {
-            const interval = setInterval(updateProgressBar, 10);
+            const interval = setInterval(updateProgressBar, 100);
             return () => clearInterval(interval);
         }
     }, [isPlayingMusic, updateProgressBar]);
 
     // Load and Play
     const loadAndPlayMusic = async (audioTitle) => {
+        if (isLoading) return;
+        setIsLoading(true);
 
         // Find the object in the JSON data that contains the audioTitle
         const audioObj = musicList.find(obj => obj.audioTitle === audioTitle);
@@ -351,6 +379,8 @@ export default function AudioPlayer() {
         // Create a new File object from the audio path in the object
         const file = new File([await fetch(audioObj.audioPath).then(response => response.blob())], audioObj.audioPath);
         setCurrentMusic(audioObj);
+        musicStack.push(audioObj.audioTitle);
+        console.log('musicStack: ', musicStack);
         if (audioSource !== null) {
             audioSource.stop();
             setAudioSource(null);
@@ -360,7 +390,7 @@ export default function AudioPlayer() {
             setAudioContext(null);
         }
         setOffset(0);
-        document.getElementById('progressBar').value = 0;
+        setSliderValue(0);
         setCurrentTime(0);
         setFileName(file.name);
         const format = file.name.substr(file.name.length - 3);
@@ -428,6 +458,28 @@ export default function AudioPlayer() {
         sourceNode.start();
         setAudioSource(sourceNode);
         setAudioContext(new3AudioContext);
+        setIsLoading(false);
+    };
+
+    const handleEnd = () => {
+        setIsPlayingMusic(false);
+        setCurrentTime(0);
+
+        switch (playMode) {
+            case 'single':
+                audioSource.stop();
+                break;
+            case 'loop':
+                loadAndPlayMusic(currentMusic.audioTitle);
+                break;
+            case 'random':
+                const randomIndex = Math.floor(Math.random() * musicList.length);
+                const randomMusic = musicList[randomIndex];
+                loadAndPlayMusic(randomMusic.audioTitle);
+                break;
+            default:
+                break;
+        }
     };
 
     // handle PlayMode
@@ -453,11 +505,25 @@ export default function AudioPlayer() {
                     break;
             }
         };
-
         audioSource.addEventListener('ended', handleEnd);
         return () => audioSource.removeEventListener('ended', handleEnd);
-    }, [audioContext, audioData, audioSource, currentMusic, musicFormat, playMode, volumeLevel]);
+    }, [audioContext, audioData, audioSource, currentMusic, musicFormat, playMode, volumeLevel, loadAndPlayMusic]);
 
+    const handleNextClick = () => {
+        switch (playMode) {
+            case 'single':
+                loadAndPlayMusic(currentMusic.audioTitle);
+                break;
+            case 'loop':
+                loadAndPlayMusic(currentMusic.audioTitle);
+                break;
+            default:
+                const randomIndex = Math.floor(Math.random() * musicList.length);
+                const randomMusic = musicList[randomIndex];
+                loadAndPlayMusic(randomMusic.audioTitle);
+                break;
+        }
+    }
 
 
     return (
@@ -530,52 +596,82 @@ export default function AudioPlayer() {
 
                     </div>
                 </div>
-                
-                <div className="row" style={{marginTop:"20px"}}>
+                <div className="player">
                     {/* Bottom block: Audio information and control. */}
-                    <div className="col-md-12" id='bottom'>
-                        <h2 style={{color: 'white'}}>{currentMusic === null ? fileName : currentMusic.audioTitle}</h2>
-                        <p>Artist: {currentMusic === null ? "unknown" : currentMusic.artist}</p>
-                        <p>Album: {currentMusic === null ? "unknown" : currentMusic.album}</p>
-
-
-                        <button onClick={handlePlayClick} disabled={isPlayingMusic || (!audioData)}>
-                            Play
-                        </button>
-                        <button onClick={handlePauseClick} disabled={!isPlayingMusic || (!audioSource)}>
-                            Pause
-                        </button>
-                        <button onClick={handleStopClick} disabled={(!audioSource)}>
-                            Stop
-                        </button>
-                        <input
-                            type="range"
-                            min="0"
-                            max="1"
-                            step="0.01"
-                            value={volumeLevel}
+                    <div className="topRow">
+                        <div className='songInfo'>
+                            <h2>{currentMusic === null ? fileName : currentMusic.audioTitle}</h2>
+                            <p> {currentMusic === null ? "unknown" : currentMusic.artist}</p>
+                        </div>
+                        <div className='control'>
+                            <button id="nextSong" onClick={handleNextClick}>
+                                <SkipNextRounded sx={{transform: "rotate(180deg)"}}/>
+                            </button>
+                            {isPlayingMusic ? (
+                                <button id="pause" onClick={handlePauseClick}>
+                                    <PauseRounded/>
+                                </button>
+                            ) : (
+                                <button id="play" onClick={handlePlayClick}>
+                                    <PlayArrowRounded/>
+                                </button>
+                            )}
+                            <button id="nextSong" onClick={handleNextClick}>
+                                <SkipNextRounded/>
+                            </button>
+                        </div>
+                        <div className='volumnAndMode'>
+                        <Slider 
+                            className='volumnSlider'
+                            defaultValue={0.5}
+                            min={0}
+                            max={1}
+                            step={0.01}
                             onChange={handleVolumeChange}
+                            value={volumeLevel}
+
+                            sx={{
+                                width: "20%",
+                                color:"#eda9ee" // light_purple
+                            }}
                         />
-                        <button id="single" onClick={() => { setPlayMode('single') }} disabled={playMode === 'single'}>Single</button>
-                        <button id="loop" onClick={() => { setPlayMode('loop') }} disabled={playMode === 'loop'}>Loop</button>
-                        <button id="random" onClick={() => { setPlayMode('random') }} disabled={playMode === 'random'}>Random</button>
-                        <div>
-                            <input
-                                type="range"
-                                id="progressBar"
-                                min="0"
-                                max={audioData ? audioData.duration : 0}
-                                step="0.01"
-                                style={{ width: "300px", height:"40px" }}
-                                onChange={setProgressBar}
-                            >
-                            </input>
-                            <p style={{color:"white"}}>{numberToTime(currentTime)} / {numberToTime(duration)}</p>
+                        <button id="single" onClick={() => { setPlayMode('single') }} disabled={playMode === 'single'}>
+                            <LooksOneRounded/>
+                        </button>
+                        <button id="loop" onClick={() => { setPlayMode('loop') }} disabled={playMode === 'loop'}>
+                            <AllInclusiveRounded/>
+                        </button>
+                        <button id="random" onClick={() => { setPlayMode('random') }} disabled={playMode === 'random'}>
+                            <ShuffleRounded/>
+                        </button>
                         </div>
                     </div>
+                    <div className="progressBar">
+                        {/* <input
+                            type="range"
+                            className="progressBar"
+                            id="progressBar"
+                            min="0"
+                            max={audioData ? audioData.duration : 0}
+                            step="0.01"
+                            onChange={setProgressBar}
+                        /> */}
+                        <Slider 
+                            className='progressSlider'
+                            min={0}
+                            max={audioData ? audioData.duration : 0}
+                            value={sliderValue}
+                            step={0.01}
+                            onChange={setProgressBar}
+                            sx={{
+                                width: "85%",
+                                color:"#eda9ee" // light_purple
+                            }}
+                        />
+                        <p>{numberToTime(currentTime)} / {numberToTime(duration)}</p>
+                    </div>
                 </div>
-                <div style={{height:"250px"}}>
-
+                <div style={{height:"120px"}}>
                 </div>
             </div>
 
