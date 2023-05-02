@@ -6,8 +6,19 @@
     left: 0;
     display: grid;
     grid-template-rows: 1fr 1fr;
-    background-color: var(--darkest_purple);
+    background-color: transparent;
     padding-top: 10px;
+}
+.visualizer {
+    position: fixed;
+    width: 100%;
+    height: 180px;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    background-color: transparent;
+    padding-bottom: 180px;
 }
 .topRow {
     width: auto;
@@ -102,4 +113,173 @@
     justify-content: flex-start;
     align-items: center;
     text-align: center;
+}
+
+.musicList{
+    width: 100%;
+    max-height: 300px;
+    overflow-y: scroll;
+}
+
+/* width */
+.musicList::-webkit-scrollbar {
+  width: 10px;
+}
+
+/* Track */
+.musicList::-webkit-scrollbar-track {
+  background: transparent; 
+}
+ 
+/* Handle */
+.musicList::-webkit-scrollbar-thumb {
+  background: var(--light_purple); 
+}
+
+/* Handle on hover */
+.musicList::-webkit-scrollbar-thumb:hover {
+  background: var(--lightest_purple); 
+}
+
+.listRow {
+    width: 100%;
+    height: 60px;
+    display: grid;
+    justify-items: flex-start;
+    align-items: center;
+    grid-template-columns: 1fr 1fr;
+}
+
+.listLeft {
+    /* allign to the right */
+    width: auto;
+    height: auto;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.listLeft button{
+    flex: absolute;
+    border: none;
+    background-color: transparent;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.listLeft .play svg{
+    color: rgb(130, 246, 130);
+}
+
+.listLeft .remove svg{
+    color: rgb(255, 165, 165);
+    margin-right: 20px;
+}
+
+.mainContainer {
+    width: 100%;
+    height: auto;
+    padding-top: 5%;
+    padding-bottom: 5%;
+    padding-left: 5%;
+    padding-right: 5%;
+}
+
+.coverAndLyrics {
+    width: auto;
+    height: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    justify-items: center;
+    padding : 10px;
+}
+
+.searchBar {
+    width: auto;
+    height: auto;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 10px;
+}
+
+.searchBar input[type=text]{
+    width: 100%;
+    height: 30px;
+    border: none;
+    border-radius: 5px;
+    margin-left: 10px;
+    background-color: var(--lightest_purple);
+}
+
+.selectMusicUpper {
+    width: auto;
+    height: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
+    justify-items: flex-start;
+}
+.selectMusicLower {
+    width: auto;
+    height: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
+    justify-items: flex-start;
+}
+
+.selectMusic input[type=text]{
+    width: 100%;
+    height: 30px;
+    border: none;
+    border-radius: 5px;
+    margin-left: 10px;
+    background-color: var(--lightest_purple);
+}
+
+.selectMusic input[type=file] {
+    width: 250px;
+    max-width: 100%;
+    color: var(--darkest_purple);
+    background: var(--lightest_purple);
+    border-radius: 10px;
+    border: 1px solid var(--lightest_purple);
+    margin-left: 10px;
+}
+
+.selectMusic input[type="file"]::file-selector-button {
+    background-color: var(--light_purple);
+    border-radius: 10px;
+    padding-top:2px;
+    border: 1px solid var(--darkest_purple);
+}
+.selectMusic input[type="file"]::file-selector-button:hover {
+    background-color: var(--dark_purple);
+    border-radius: 10px;
+    border: 1px solid var(--darkest_purple);
+}
+.selectMusic input[type="file"]::file-selector-button::after {
+    background-color: var(--dark_purple);
+    border-radius: 10px;
+    border: 1px solid var(--darkest_purple);
+}
+
+.selectMusic button {   
+    height: 30px;
+    border: none;
+    border-radius: 5px;
+    margin-left: 10px;
+    background-color: rgb(130, 246, 130);
+    color: var(--darkest_purple)
+}
+
+.field {
+    display: flex;
+    justify-content: center;
+    align-content: center;
+    margin-left: 10px;
+    margin-top: 5px;
+    margin-bottom: 5px;
 }

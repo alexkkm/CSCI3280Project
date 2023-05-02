@@ -31,7 +31,7 @@ const MusicVisualizer = ({ audioContext, analyser, width, height }) => {
             const barWidth = (width / dataArray.length) * 2.5;
             
             // heightFactor is used to scale the height of the bars, if canvas is short, factor should be higher
-            const heightFactor = 1; // 1 means no scaling, 2 means double the height 0.5 means half height, etc.
+            const heightFactor = 1.2; // 1 means no scaling, 2 means double the height 0.5 means half height, etc.
             let barHeight;
             let x = 0;
 
@@ -41,12 +41,13 @@ const MusicVisualizer = ({ audioContext, analyser, width, height }) => {
             barHeight = dataArray[i] / 127 * height * heightFactor;
 
 
-            canvasContext.fillStyle = `rgb(${barHeight + 100}, 0, 0)`; // create a fade out effect for red channel
+            // canvasContext.fillStyle = `rgb(${barHeight + 100}, 0, 0)`; // create a fade out effect for red channel
 
+            canvasContext.fillStyle = `rgb(${barHeight*barHeight*0.00002 + 29},${barHeight*barHeight*0.00002  + 3},${barHeight*barHeight*0.00002  + 29})`;
 
             canvasContext.fillRect(x, height - barHeight / 2, barWidth, barHeight);
 
-            x += barWidth + 1; // Move the position to the next bar
+            x += barWidth + 0.1; // Move the position to the next bar
             }
         };
         

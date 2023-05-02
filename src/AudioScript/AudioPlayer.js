@@ -12,6 +12,7 @@ import SkipNextRounded from '@mui/icons-material/SkipNextRounded';
 import AllInclusiveRounded from '@mui/icons-material/AllInclusiveRounded';
 import ShuffleRounded from '@mui/icons-material/ShuffleRounded';
 import LooksOneRounded from '@mui/icons-material/LooksOneRounded';
+import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded';
 
 export default function AudioPlayer() {
 
@@ -39,7 +40,6 @@ export default function AudioPlayer() {
     const [playMode, setPlayMode] = useState('single'); // for play mode, single, loop, random
     const [sliderValue, setSliderValue] = useState(0); // for progress bar
     const [isLoading, setIsLoading] = useState(false); // for loading
-    const [isDraggingProgressBar, setIsDraggingProgressBar] = useState(false); // for progress bar
     const [Keyword, setKeyword] = useState('');
     const handleKeywordChange = (event) => {setKeyword(event.target.value);};
     const [title, setTitle] = useState('unknown'); // for title
@@ -54,6 +54,7 @@ export default function AudioPlayer() {
     var musicStack = [];
 
     const handleCoverFileChange = (event) => {
+        console.log("DSADSA")
         const file = event.target.files[0];
         const format = file.name.substr(file.name.length - 3);
         if (format !== 'jpg' && format !== 'JPG' && format !== 'png' && format !== 'PNG') {
@@ -289,21 +290,11 @@ export default function AudioPlayer() {
         }
     };
 
-    const onProgressBarDragging = (e, v) => {
-        if (e.buttons !== 0){
-            setIsDraggingProgressBar(true);
-            setSliderValue(v);
-        }
-    }
-
     // Progress Bar
     const [offset, setOffset] = useState(0);
     const setProgressBar = (e, v) => {
         if (audioSource === null) return;
         if (isLoading === true) return;
-
-         
-        setIsDraggingProgressBar(false);
 
         let targetTime = v;
         setOffset(targetTime);
@@ -372,13 +363,10 @@ export default function AudioPlayer() {
 
     useEffect(() => {
         if (isPlayingMusic) {
-            if (isDraggingProgressBar) {
-                return;
-            }
             const interval = setInterval(updateProgressBar, 100);
             return () => clearInterval(interval);
         }
-    }, [isPlayingMusic, updateProgressBar, isDraggingProgressBar]);
+    }, [isPlayingMusic, updateProgressBar]);
 
     // Load and Play
     const loadAndPlayMusic = async (audioTitle) => {
@@ -544,182 +532,158 @@ export default function AudioPlayer() {
 
     return (
         <div id="audioPlayer">
-            <div className="container">
-                <div className="row align-items-center">
+            <div className="mainContainer">
+                <div className="coverAndLyrics">
                     {/* Top left block: Cover photo and visualizer. */}
-                    <section className=" col-lg-7 col-md-12 p-1 p-lg-5" id='topLeft'>
-                        <div className="d-flex flex-column align-items-center">
-                            <MusicVisualizer class="mx-auto d-block" audioContext={audioContext} analyser={analyser} width={450} height={50} />
+                    <div className="d-flex flex-column align-items-center">
+                        {/* <MusicVisualizer class="mx-auto d-block" audioContext={audioContext} analyser={analyser} width={450} height={50} /> */}
 
-                            {currentMusic !== null && currentMusic.coverPhotoPath !== '' && currentMusic.coverPhotoPath !== undefined &&
-                                <img src={currentMusic.coverPhotoPath} alt="coverPhoto" style={{ width: "450px", height: "450px" }}></img>
-                            }
-                        </div>
-                    </section>
-
-
+                        {currentMusic !== null && currentMusic.coverPhotoPath !== '' && currentMusic.coverPhotoPath !== undefined &&
+                            <img src={currentMusic.coverPhotoPath} alt="coverPhoto" style={{ width: "450px", height: "450px" }}></img>
+                        }
+                    </div>
                     {/* Top right block: Lyrics. */}
-                    <section className="col-lg-5 col-md-12 p-1 p-lg-5" id='topRight'>
-                        <div className="d-flex flex-column align-items-center">
-                            {currentMusic !== null && <LrcDisplayer music={currentMusic} currentTime={currentTime} />}
-                        </div>
-                    </section>
+                    <div className="d-flex flex-column align-items-center">
+                        {currentMusic !== null && <LrcDisplayer music={currentMusic} currentTime={currentTime} />}
+                    </div>
                 </div>
 
-                <div className="row flex-grow-1">
-                    {/* Upper bottom: Song list and uploding. */}
-                    <div className="col-md-12" id='upperBottom'>
-                        <h3>
-                            Search
-                        </h3>
-                        <input type= "text" placeholder="Keyword..." style={{color: "black", width: "200px"}} onChange = {handleKeywordChange}></input>
-                        <div style={{minHeight: "200px", maxHeight: "400px", maxWidth: "1000px", overflow: "auto"}}>
-                            {musicList.map((music, index) => {
-                                if (music.audioTitle.toLowerCase().includes(Keyword.toLowerCase()) ||music.artist.toLowerCase().includes(Keyword.toLowerCase()) || music.album.toLowerCase().includes(Keyword.toLowerCase())) {
-                                  return (
-                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gridGap: 20, color: "white" }}>
-                                        <div>
-                                            <button style={{background: "lightgreen"}} onClick={() => { loadAndPlayMusic(music.audioTitle) }}>play</button>
-                                            <button style={{background: "pink"}} onClick={() => { deleteMusic(music.audioTitle) }}>delete</button>
-                                            {music.audioTitle}
-                                        </div>
-                                        <div>{music.artist}</div>
-                                        <div>{music.album}</div>
-                                    </div>
-                                );  
-                                }
-                                
-                            })}
-                        </div>
-                        
-                        <div id="selectMusic" style={{marginTop: "20px"}}>
-                            <h3>
-                                Add music from your computer 
-                            </h3>
-                            <input type="text" placeholder="Title" style={{color:"black", width: "200px"}} onChange={handleTitleChange} />
-                            <input type="text" placeholder="Artist" style={{color:"black", width: "200px"}} onChange={handleArtistChange}/>
-                            <input type="text" placeholder="Album" style={{color:"black", width: "200px"}} onChange={handleAlbumChange}/>
-                            <div style={{display:"flex", flexDirection:"row", justifyContent:"space-between", margin:"5px"}}>
-                                <>
-                                    <p style={{margin: "4px"}}>Cover</p>
-                                    {/* <label for="coverFile" style={{background:"white", marginLeft:"5px", marginRight:"5px"}}>Select Cover</label> */}
-                                    <input id="coverFile" type="file" style={{color:"grey"}} onChange={handleCoverFileChange} />
-                                </>
-                                <>
-                                    <p style={{margin: "4px"}}>Lyrics</p>
-                                    {/* <label for="lyricsFile" style={{background:"white", marginLeft:"5px", marginRight:"5px"}}>Select Lyrics</label> */}
-                                    <input id="lyricsFile" type="file" style={{color:"grey"}} onChange={handleLyricsFileChange} />
-                                </>
-                                <>
-                                    <p style={{margin: "4px"}}>Music</p>
-                                    {/* <label for="musicFile" style={{background:"white", marginLeft:"5px", marginRight:"5px"}}>Select Music</label> */}
-                                    <input id="musicFile" type="file" style={{color:"grey"}} onChange={handleMusicFileChange} />
-                                </>
+                <div className="searchBar">
+                    <h3>
+                        Search
+                    </h3>
+                    <input type= "text" placeholder=" keyword..." style={{color: "black", width: "200px"}} onChange = {handleKeywordChange}></input>
+                </div>
+
+                {/* Upper bottom: Song list and uploding. */}
+                <div className="musicList">
+                    {musicList.map((music, index) => {
+                        return (
+                            <div className="listRow" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gridGap: 20, color: "white" }}>
+                                <div className="listLeft">
+                                    <button onClick={() => { loadAndPlayMusic(music.audioTitle) }}>
+                                    <div className="play"><PlayArrowRounded/></div>
+                                    </button>
+                                    <button onClick={() => { deleteMusic(music.audioTitle) }}>
+                                    <div className="remove"><DeleteOutlineRounded/></div>
+                                    </button>
+                                </div>
+                                <div>{music.audioTitle}</div>
+                                <div>{music.artist}</div>
+                                <div>{music.album}</div>
                             </div>
-                            <button style={{background:"lightblue"}} onClick={addMusic}>Upload</button>
-                        </div>
-
-                    </div>
+                        );
+                    })}
                 </div>
-                <div className="player">
-                    {/* Bottom block: Audio information and control. */}
-                    <div className="topRow">
-                        <div className='songInfo'>
-                            <h2>{currentMusic === null ? fileName : currentMusic.audioTitle}</h2>
-                            <p> {currentMusic === null ? "unknown" : currentMusic.artist}</p>
-                        </div>
-                        <div className='control'>
-                            <button id="nextSong" onClick={handleNextClick}>
-                                <SkipNextRounded sx={{transform: "rotate(180deg)"}}/>
-                            </button>
-                            {isPlayingMusic ? (
-                                <button id="pause" onClick={handlePauseClick}>
-                                    <PauseRounded/>
-                                </button>
-                            ) : (
-                                <button id="play" onClick={handlePlayClick}>
-                                    <PlayArrowRounded/>
-                                </button>
-                            )}
-                            <button id="nextSong" onClick={handleNextClick}>
-                                <SkipNextRounded/>
-                            </button>
-                        </div>
-                        <div className='volumnAndMode'>
-                        <Slider 
-                            className='volumnSlider'
-                            defaultValue={0.5}
-                            min={0}
-                            max={1}
-                            step={0.01}
-                            onChange={handleVolumeChange}
-                            value={volumeLevel}
 
-                            sx={{
-                                width: "20%",
-                                color:"#eda9ee" // light_purple
-                            }}
-                        />
-                        <button id="single" onClick={() => { setPlayMode('single') }} disabled={playMode === 'single'}>
-                            <LooksOneRounded/>
-                        </button>
-                        <button id="loop" onClick={() => { setPlayMode('loop') }} disabled={playMode === 'loop'}>
-                            <AllInclusiveRounded/>
-                        </button>
-                        <button id="random" onClick={() => { setPlayMode('random') }} disabled={playMode === 'random'}>
-                            <ShuffleRounded/>
-                        </button>
+                <div className="selectMusic" style={{marginTop: "20px"}}>
+                    <h3>
+                        Add music from your computer 
+                    </h3>
+                    <div className="selectMusicUpper">
+                        <div className='field'>
+                            <p style={{margin: "4px"}}>Title</p>
+                            <input type="text" placeholder=" Title" style={{color:"black", width: "200px"}} onChange={handleTitleChange} />
+                        </div>
+                        <div className='field'>
+                            <p style={{margin: "4px"}}>Artist</p>
+                            <input type="text" placeholder=" Artist" style={{color:"black", width: "200px"}} onChange={handleArtistChange}/>
+                        </div>
+                        <div className='field'>
+                            <p style={{margin: "4px"}}>Album</p>
+                            <input type="text" placeholder=" Album" style={{color:"black", width: "200px"}} onChange={handleAlbumChange}/>
                         </div>
                     </div>
-                    <div className="progressBar">
-                        {/* <input
-                            type="range"
-                            className="progressBar"
-                            id="progressBar"
-                            min="0"
-                            max={audioData ? audioData.duration : 0}
-                            step="0.01"
-                            onChange={setProgressBar}
-                        /> */}
-                        <Slider 
-                            className='progressSlider'
-                            min={0}
-                            max={audioData ? audioData.duration : 0}
-                            value={sliderValue}
-                            step={0.01}
-                            onChangeCommitted={setProgressBar}
-                            sx={{
-                                width: "85%",
-                                color:"#eda9ee" // light_purple
-                            }}
-                        />
-                        <p>{numberToTime(currentTime)} / {numberToTime(duration)}</p>
+                    <div className="selectMusicLower">
+                        <div className="field">
+                            <p style={{margin: "4px"}}>Cover</p>
+                            {/* <label for="coverFile" style={{background:"white", marginLeft:"5px", marginRight:"5px"}}>Select Cover</label> */}
+                            <input id="coverFile" type="file" onChange={handleCoverFileChange} />
+                        </div>
+                        <div className="field">
+                            <p style={{margin: "4px"}}>Lyrics</p>
+                            {/* <label for="lyricsFile" style={{background:"white", marginLeft:"5px", marginRight:"5px"}}>Select Lyrics</label> */}
+                            <input id="lyricsFile" type="file" onChange={handleLyricsFileChange} />
+                        </div>
+                        <div className="field">
+                            <p style={{margin: "4px"}}>Music</p>
+                            {/* <label for="musicFile" style={{background:"white", marginLeft:"5px", marginRight:"5px"}}>Select Music</label> */}
+                            <input id="musicFile" type="file" onChange={handleMusicFileChange} />
+                        </div>
                     </div>
-                </div>
-                <div style={{height:"120px"}}>
+                    <button style={{background:"rgb(130, 246, 130)"}} onClick={addMusic}>Upload</button>
                 </div>
             </div>
 
-
-
-
-
-
-            {/* Debug: Audio data. */}
-            {/* {
-                audioData && (
-                    <div>
-                        <p>File Name: {fileName}</p>
-                        <p>File Format: {musicFormat}</p>
-                        <p>Audio Format: {audioData.format}</p>
-                        <p>Number of Channels: {audioData.numChannels}</p>
-                        <p>Sample Rate: {audioData.sampleRate}</p>
-                        <p>Byte Rate: {audioData.byteRate}</p>
-                        <p>Block Align: {audioData.blockAlign}</p>
-                        <p>Bit Depth: {audioData.bitDepth}</p>
+            <div className='visualizer'><MusicVisualizer class="mx-auto d-block" audioContext={audioContext} analyser={analyser} width={1980} height={300} /></div>
+            <div className="player">
+                {/* Bottom block: Audio information and control. */}
+                <div className="topRow">
+                    <div className='songInfo'>
+                        <h2>{currentMusic === null ? fileName : currentMusic.audioTitle}</h2>
+                        <p> {currentMusic === null ? "unknown" : currentMusic.artist}</p>
                     </div>
-                )
-            } */}
-        </div >
+                    <div className='control'>
+                        <button id="nextSong" onClick={handleNextClick}>
+                            <SkipNextRounded sx={{transform: "rotate(180deg)"}}/>
+                        </button>
+                        {isPlayingMusic ? (
+                            <button id="pause" onClick={handlePauseClick}>
+                                <PauseRounded/>
+                            </button>
+                        ) : (
+                            <button id="play" onClick={handlePlayClick}>
+                                <PlayArrowRounded/>
+                            </button>
+                        )}
+                        <button id="nextSong" onClick={handleNextClick}>
+                            <SkipNextRounded/>
+                        </button>
+                    </div>
+                    <div className='volumnAndMode'>
+                    <Slider 
+                        className='volumnSlider'
+                        defaultValue={0.5}
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        onChange={handleVolumeChange}
+                        value={volumeLevel}
+
+                        sx={{
+                            width: "20%",
+                            color:"#eda9ee" // light_purple
+                        }}
+                    />
+                    <button id="single" onClick={() => { setPlayMode('single') }} disabled={playMode === 'single'}>
+                        <LooksOneRounded/>
+                    </button>
+                    <button id="loop" onClick={() => { setPlayMode('loop') }} disabled={playMode === 'loop'}>
+                        <AllInclusiveRounded/>
+                    </button>
+                    <button id="random" onClick={() => { setPlayMode('random') }} disabled={playMode === 'random'}>
+                        <ShuffleRounded/>
+                    </button>
+                    </div>
+                </div>
+                <div className="progressBar">
+                    <Slider 
+                        className='progressSlider'
+                        min={0}
+                        max={audioData ? audioData.duration : 0}
+                        value={sliderValue}
+                        step={0.01}
+                        onChangeCommitted={setProgressBar}
+                        sx={{
+                            width: "85%",
+                            color:"#eda9ee" // light_purple
+                        }}
+                    />
+                    <p>{numberToTime(currentTime)} / {numberToTime(duration)}</p>
+                </div>
+            </div>
+            
+            <div style={{height:"120px"}}/>
+        </div>
     );
 }
